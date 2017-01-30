@@ -35,22 +35,24 @@ security:
 tags:
 - name: "user"
   description: "operations concerning a user directly"
+- name: "mentorship"
+  description: "operations concerning a mentorship"
 paths:
-  /user/{username}:
+  /user/{userId}:
     get:
       tags:
       - "user"
-      summary: Find user by username
+      summary: Find user by id
       description: Returns a user's profile.
-      operationId: getUserByUsername
+      operationId: getUserById
       produces:
       - "application/json"
       parameters:
-      - name: "username"
+      - name: "userId"
         in: "path"
-        description: "username of the user to find"
+        description: "id of the user to find"
         required: true
-        type: "string"
+        type: "integer"
       responses:
         200:
           description: "successful operation"
@@ -61,17 +63,17 @@ paths:
     put:
       tags:
       - "user"
-      summary: Update user by username
+      summary: Update user by id
       description: Updates an existing user's profile. Can only be done by the logged in user or by an admin.
-      operationId: updateUserByUsername
+      operationId: updateUserById
       produces:
       - "application/json"
       parameters:
-      - name: "username"
+      - name: "userId"
         in: "path"
-        description: "username of the user to update"
+        description: "id of the user to update"
         required: true
-        type: "string"
+        type: "integer"
       responses:
         200:
           description: "successful operation"
@@ -79,19 +81,19 @@ paths:
           description: "user is not the same as the logged in user."
         404:
           description: "user not found"
-  /user/{username}/image:
+  /user/{userId}/image:
     get:
       tags:
       - "user"
       summary: Find user profile image by username
       description: Returns a given user's profile image, if they have set one.
-      operationId: getUserImageByUsername
+      operationId: getUserImageById
       produces:
       - "image/*"
       parameters:
-      - name: "username"
+      - name: "userId"
         in: "path"
-        description: "username of the user to find image for"
+        description: "id of the user to find image for"
         required: true
         type: "string"
       responses:
@@ -104,13 +106,13 @@ paths:
     put:
       tags:
       - "user"
-      summary: Set user profile image by username
+      summary: Set user profile image by id
       description: "Updates an existing user's profile image. Can only be done by the logged in user or by an admin. Maxmimum file size determined by server's maxFileUploadSize property, whichcan be found within /info response."
-      operationId: updateUserImageByUsername
+      operationId: updateUserImageById
       parameters:
-      - name: "username"
+      - name: "userId"
         in: "path"
-        description: "username of the user to find image for"
+        description: "id of the user to find image for"
         required: true
         type: "string"
       - name: "image"
@@ -127,16 +129,16 @@ paths:
           description: "user not found"
         403:  
           description: "user is not the same as the logged in user."
-  /user/{username}/mentorships:
+  /user/{userId}/mentorships:
     get:
-      tags: ["user"]
+      tags: ["user", "mentorship"]
       summary: Get user's mentorships
       description: "Returns array of mentorships user is signed up for. Can only be done by the logged in user or by an admin."
-      operationId: getUserMentorshipsByUsername
+      operationId: getUserMentorshipsById
       parameters:
-      - name: "username"
+      - name: "userId"
         in: "path"
-        description: "username of the user to find mentorships for"
+        description: "id of the user to find mentorships for"
         required: true
         type: "string"
       responses:
@@ -155,16 +157,16 @@ paths:
           description: "user does not have access (not same as logged in user or user isn't admin)"
         404:
           description: "user not found"
-  /user/{username}/mentorships/{mentorshipId}:
+  /user/{userId}/mentorships/{mentorshipId}:
     get:
-      tags: ["user"]
+      tags: ["user", "mentorship"]
       summary: Get specific user mentorship
       description: "Returns a mentorship a user is participating in, given a specific mentorship id. Can only be done by the logged in user or by an admin."
-      operationId: getUserMentorshipByUsernameAndId
+      operationId: getSpecificUserMentorshipById
       parameters:
-      - name: "username"
+      - name: "userId"
         in: "path"
-        description: "username of the user to find mentorship for"
+        description: "id of the user to find mentorship for"
         required: true
         type: "string"
       - name: "mentorshipId"
@@ -196,9 +198,9 @@ definitions:
   user:
     type: object
     properties:
-      username:
-        type: "string"
-        description: "unique identifier for the user. used to find a user. by default, this will be the first half of the user's email address."
+      id:
+        type: "integer"
+        description: "unique identifier for the user. used to find a user."
       email:
         type: "string"
         example: "johnsmith@atos.com"
