@@ -25,7 +25,20 @@ SECRET_KEY = ')-_)6zcsd_!4(1$&7m=o95cw+l$jd@j8%2jgvwtu&rdwjfla#f'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+import netifaces
+
+# Find out what the IP addresses are at run time
+# This is necessary because otherwise Gunicorn will reject the connections
+def ip_addresses():
+    ip_list = []
+    for interface in netifaces.interfaces():
+        addrs = netifaces.ifaddresses(interface)
+        for x in (netifaces.AF_INET, netifaces.AF_INET6):
+            if x in addrs:
+                ip_list.append(addrs[x][0]['addr'])
+    return ip_list
+
+ALLOWED_HOSTS = ['dev.mbell.me'] + ip_addresses()
 
 
 # Application definition
