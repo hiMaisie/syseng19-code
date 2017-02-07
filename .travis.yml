@@ -6,9 +6,8 @@ services: postgresql
 env:
     - DJANGO=1.10.5
 install:
-    - pip install -q Django==$DJANGO --use-mirrors
-    - pip install pep8 --use-mirrors
-    - pip install psycopg2 --use-mirrors
+    - pip install -q Django==$DJANGO
+    - pip install psycopg2
 before_script:
     - psql -c 'create database travis_ci_test;' -U postgres
     - cp .env.travis .env
