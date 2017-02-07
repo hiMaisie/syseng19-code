@@ -1,15 +1,24 @@
 language: python
 python:
-    - "3.5.2"
-    - "3.6"
+- 3.5.2
+- '3.6'
 services: postgresql
 env:
-    - DJANGO=1.10.5
+- DJANGO=1.10.5
 install:
-    - pip install -q Django==$DJANGO
-    - pip install -r requirements.txt
+- pip install -q Django==$DJANGO
+- pip install -r requirements.txt
 before_script:
-    - psql -c 'create database travis_ci_test;' -U postgres
-    - cp .env.travis .env
+- psql -c 'create database travis_ci_test;' -U postgres
+- cp .env.travis .env
 script:
-    - python manage.py test
+- python manage.py test
+before_install:
+- openssl aes-256-cbc -K $encrypted_37370079a538_key -iv $encrypted_37370079a538_iv
+  -in travis.pem.enc -out travis.pem -d
+after_success:
+- eval "$(ssh-agent -s)"
+- chmod 600 travis.pem
+- ssh-add travis.pem
+- git remote add deploy django@dev.mbell.me:~django/repo/code.git
+- git push deploy

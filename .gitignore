@@ -18,3 +18,5 @@ build/
 tests/report/
 .env
 .virtualenvs
+travis.pem
+1
