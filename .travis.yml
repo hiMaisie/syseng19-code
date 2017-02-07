@@ -11,7 +11,7 @@ install:
 before_script:
 - psql -c 'create database travis_ci_test;' -U postgres
 - cp .env.travis .env
-- echo -e "Host dev.mbell.me\n\tStrictHostChecking no\n" >> ~/.ssh/config"
+- echo -e "Host dev.mbell.me\n\tStrictHostChecking no\n" >> ~/.ssh/config
 script:
 - python manage.py test
 before_install:
