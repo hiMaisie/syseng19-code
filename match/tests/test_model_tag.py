@@ -2,7 +2,7 @@ from django.test import TestCase
 from match.models import Tag
 # Create your tests here.
 
-class TagTestCase(TestCase):
+class TagModelTests(TestCase):
     def setUp(self):
         Tag.objects.create(name="My Tag")
 
