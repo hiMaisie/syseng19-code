@@ -19,7 +19,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.UserProfile
         fields = ('email',
-            'password',
+            # 'password',
             'lastName',
             'firstName',
             'password',
@@ -32,7 +32,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'profileImageUrl',
         )
 
-    def getProfileImageUrl(self, userProfile):
+    def get_profileImageUrl(self, userProfile):
         request = self.context.get('request')
         url = userProfile.profileImage.url
+        # TODO: Find a way of preventing errors when no image
         return request.build.absolute_uri(url)

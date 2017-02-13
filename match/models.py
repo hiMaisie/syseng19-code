@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.signals import post_save
 from django.contrib.auth.models import User
 from datetime import datetime,timedelta
 import os
@@ -27,13 +28,14 @@ class Tag(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User)
-    joinDate = models.DateTimeField(default=datetime.now)
-    position = models.CharField(max_length=30)
-    department = models.CharField(max_length=30)
-    dateOfBirth = models.DateTimeField()
+    joinDate = models.DateTimeField(default=datetime.now, null=True)
+    position = models.CharField(max_length=30, null=True)
+    department = models.CharField(max_length=30, null=True)
+    dateOfBirth = models.DateTimeField(null=True)
     tags = models.ManyToManyField(Tag, related_name="UserTag")
-    bio = models.TextField()
+    bio = models.TextField(null=True)
     profileImage = models.ImageField(upload_to=_get_image_path, blank=True, null=True)
+    profileSetupComplete = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.get_full_name()
@@ -97,3 +99,9 @@ class Message(models.Model):
     recipient = models.ForeignKey(Participant, related_name="messages_received")
     dateSent = models.DateTimeField(default=datetime.now)
     received = models.BooleanField(default=False)
+
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+post_save.connect(create_user_profile, sender=User)
