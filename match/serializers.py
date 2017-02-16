@@ -36,4 +36,5 @@ class UserProfileSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         url = userProfile.profileImage.url
         # TODO: Find a way of preventing errors when no image
-        return request.build.absolute_uri(url)
+        if url:
+            return request.build.absolute_uri(url)
