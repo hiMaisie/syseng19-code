@@ -1,7 +1,9 @@
+from datetime import timedelta
+from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
-from django.contrib.auth.models import User
-from datetime import datetime,timedelta
+from django.utils import timezone
+from match.validators import user_validators
 import os
 import uuid
 
@@ -13,12 +15,12 @@ def _get_image_path(instance, filename):
 # Function that returns datetime two weeks after right now.
 # Default value for a cohort's sign up closing date.
 def _get_default_close_date():
-    return datetime.now() + timedelta.days(14)
+    return timezone.now() + timedelta.days(14)
 
 # Function that returns datetime three weeks after right now.
 # Default value for a cohort's matching closing date.
 def _get_default_match_date():
-    return datetime.now() + timedelta.days(21)
+    return timezone.now() + timedelta.days(21)
 
 class Tag(models.Model):
     name = models.CharField(max_length=30, primary_key=True)
@@ -28,12 +30,12 @@ class Tag(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User)
-    joinDate = models.DateTimeField(default=datetime.now, null=True)
-    position = models.CharField(max_length=30, null=True)
-    department = models.CharField(max_length=30, null=True)
-    dateOfBirth = models.DateTimeField(null=True)
+    joinDate = models.DateTimeField(default=timezone.now, null=True, validators=[user_validators.validate_joinDate])
+    position = models.CharField(max_length=30, blank=True)
+    department = models.CharField(max_length=30, blank=True)
+    dateOfBirth = models.DateTimeField(blank=True, validators=[user_validators.validate_joinDate])
     tags = models.ManyToManyField(Tag, related_name="UserTag")
-    bio = models.TextField(null=True)
+    bio = models.TextField(blank=True)
     profileImage = models.ImageField(upload_to=_get_image_path, blank=True, null=True)
     profileSetupComplete = models.BooleanField(default=False)
 
@@ -59,7 +61,7 @@ class Cohort(models.Model):
     cohortId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     programme = models.ForeignKey(Programme, on_delete=models.CASCADE, related_name="cohorts")
     cohortSize = models.IntegerField(default=0)
-    openDate = models.DateTimeField(default=datetime.now)
+    openDate = models.DateTimeField(default=timezone.now)
     closeDate = models.DateTimeField(default=_get_default_close_date)
     matchDate = models.DateTimeField(default=_get_default_match_date)
     createdBy = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="cohorts")
@@ -71,7 +73,7 @@ class Participant(models.Model):
     participantId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(User, related_name="mentorships")
     cohort = models.ForeignKey(Cohort, related_name="participants")
-    signUpDate = models.DateTimeField(default=datetime.now)
+    signUpDate = models.DateTimeField(default=timezone.now)
     isMentor = models.BooleanField(default=False)
     isMatched = models.BooleanField(default=False)
 
@@ -97,7 +99,7 @@ class Message(models.Model):
     mentorship = models.ForeignKey(Mentorship, related_name="messages")
     sender = models.ForeignKey(Participant, related_name="messages_sent")
     recipient = models.ForeignKey(Participant, related_name="messages_received")
-    dateSent = models.DateTimeField(default=datetime.now)
+    dateSent = models.DateTimeField(default=timezone.now)
     received = models.BooleanField(default=False)
 
 def create_user_profile(sender, instance, created, **kwargs):
