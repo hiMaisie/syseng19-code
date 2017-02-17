@@ -1,4 +1,4 @@
-from datetime import datetime,timedelta
+from datetime import date,timedelta
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -20,7 +20,7 @@ class UserProfileModelTests(TestCase):
     def test_user_profile_join_date_set_correctly(self):
         user = self._create_test_user()
         try:
-            user.userprofile.joinDate = timezone.now() - timedelta(days=365)
+            user.userprofile.joinDate = date.today() - timedelta(days=365)
             user.userprofile.full_clean()
         except ValidationError:
             self.fail("Error validating")
@@ -28,17 +28,17 @@ class UserProfileModelTests(TestCase):
     def test_user_profile_join_date_set_in_future(self):
         user = self._create_test_user()
         with self.assertRaises(ValidationError):
-            user.userprofile.joinDate = timezone.now() + timedelta(days=30)
+            user.userprofile.joinDate = date.today() + timedelta(days=30)
             user.userprofile.full_clean()
 
     def test_user_profile_years_worked_calculated_correctly(self):
         userprofile = self._create_test_user().userprofile
-        userprofile.joinDate = timezone.now() - timedelta(days=(366*2))
+        userprofile.joinDate = date.today() - timedelta(days=(366*2))
         self.assertEqual(userprofile.getYearsWorked(), 2)
 
     def test_user_profile_years_worked_less_than_one_year(self):
         userprofile = self._create_test_user().userprofile
-        userprofile.joinDate = timezone.now() - timedelta(days=(20))
+        userprofile.joinDate = date.today() - timedelta(days=(20))
         self.assertEqual(userprofile.getYearsWorked(), 0)
 
     def test_user_profile_years_worked_null_when_join_date_null(self):
@@ -48,7 +48,7 @@ class UserProfileModelTests(TestCase):
     def test_user_profile_dob_set_correctly(self):
         userprofile = self._create_test_user().userprofile
         try:
-            userprofile.dateOfBirth = timezone.now() - timedelta(days=365)
+            userprofile.dateOfBirth = date.today() - timedelta(days=365)
             userprofile.full_clean()
         except ValidationError:
             self.fail("Date of birth validation failing valid input")
@@ -57,13 +57,13 @@ class UserProfileModelTests(TestCase):
     def test_user_profile_dob_set_in_future(self):
         userprofile = self._create_test_user().userprofile
         with self.assertRaises(ValidationError):
-            userprofile.dateOfBirth = timezone.now() + timedelta(days=1)
+            userprofile.dateOfBirth = date.today() + timedelta(days=1)
             userprofile.full_clean()
 
     def test_user_profile_age_calculated_correctly(self):
         userprofile = self._create_test_user().userprofile
         # set dob to >1 year ago. so age should be 1
-        userprofile.dateOfBirth = timezone.now() - timedelta(days=368)
+        userprofile.dateOfBirth = date.today() - timedelta(days=368)
         self.assertEqual(userprofile.getAge(), 1)
 
     def test_user_profile_age_null_when_dob_null(self):

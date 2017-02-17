@@ -1,4 +1,4 @@
-from datetime import datetime,timedelta
+from datetime import date,timedelta
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
@@ -30,12 +30,12 @@ class Tag(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User)
-    joinDate = models.DateTimeField(default=timezone.now, null=True, validators=[user_validators.validate_joinDate])
-    position = models.CharField(max_length=30, blank=True)
-    department = models.CharField(max_length=30, blank=True)
-    dateOfBirth = models.DateTimeField(blank=True, validators=[user_validators.validate_joinDate])
+    joinDate = models.DateField(default=date.today, null=True, validators=[user_validators.validate_joinDate])
+    position = models.CharField(max_length=30, blank=True, default="")
+    department = models.CharField(max_length=30, blank=True, default="")
+    dateOfBirth = models.DateField(blank=True, null=True, validators=[user_validators.validate_joinDate])
     tags = models.ManyToManyField(Tag, related_name="UserTag")
-    bio = models.TextField(blank=True)
+    bio = models.TextField(default="", blank=True)
     profileImage = models.ImageField(upload_to=_get_image_path, blank=True, null=True)
     profileSetupComplete = models.BooleanField(default=False)
 
@@ -45,12 +45,12 @@ class UserProfile(models.Model):
     def getAge(self):
         if not self.dateOfBirth:
             return None
-        return (timezone.now() - self.dateOfBirth).days // 365.25
+        return (date.today() - self.dateOfBirth).days // 365.25
 
     def getYearsWorked(self):
         if not self.joinDate:
             return None
-        return (timezone.now() - self.joinDate).days // 365.25
+        return (date.today() - self.joinDate).days // 365.25
 
 class Programme(models.Model):
     programmeId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
