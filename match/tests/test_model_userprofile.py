@@ -80,5 +80,4 @@ class UserProfileModelTests(TestCase):
 
     # Creates a basic test user.
     def _create_test_user(self):
-        User.objects.create_user(username="test@example.com", email="test@example.com", password="hunter2", last_name="Smith", first_name="John")
-        return User.objects.get(email="test@example.com")
+        return User.objects.create_user(username="test@example.com", email="test@example.com", password="hunter2", last_name="Smith", first_name="John")
