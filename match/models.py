@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime,timedelta
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
@@ -41,6 +41,16 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.get_full_name()
+
+    def getAge(self):
+        if not self.dateOfBirth:
+            return None
+        return (timezone.now() - self.dateOfBirth).days // 365.25
+
+    def getYearsWorked(self):
+        if not self.joinDate:
+            return None
+        return (timezone.now() - self.joinDate).days // 365.25
 
 class Programme(models.Model):
     programmeId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)

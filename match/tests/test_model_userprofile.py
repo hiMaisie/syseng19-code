@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime,timedelta
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -31,6 +31,20 @@ class UserProfileModelTests(TestCase):
             user.userprofile.joinDate = timezone.now() + timedelta(days=30)
             user.userprofile.full_clean()
 
+    def test_user_profile_years_worked_calculated_correctly(self):
+        userprofile = self._create_test_user().userprofile
+        userprofile.joinDate = timezone.now() - timedelta(days=(366*2))
+        self.assertEqual(userprofile.getYearsWorked(), 2)
+
+    def test_user_profile_years_worked_less_than_one_year(self):
+        userprofile = self._create_test_user().userprofile
+        userprofile.joinDate = timezone.now() - timedelta(days=(20))
+        self.assertEqual(userprofile.getYearsWorked(), 0)
+
+    def test_user_profile_years_worked_null_when_join_date_null(self):
+        userprofile = self._create_test_user().userprofile
+        self.assertFalse(userprofile.getYearsWorked())
+
     def test_user_profile_dob_set_correctly(self):
         userprofile = self._create_test_user().userprofile
         try:
@@ -45,6 +59,16 @@ class UserProfileModelTests(TestCase):
         with self.assertRaises(ValidationError):
             userprofile.dateOfBirth = timezone.now() + timedelta(days=1)
             userprofile.full_clean()
+
+    def test_user_profile_age_calculated_correctly(self):
+        userprofile = self._create_test_user().userprofile
+        # set dob to >1 year ago. so age should be 1
+        userprofile.dateOfBirth = timezone.now() - timedelta(days=368)
+        self.assertEqual(userprofile.getAge(), 1)
+
+    def test_user_profile_age_null_when_dob_null(self):
+        userprofile = self._create_test_user().userprofile
+        self.assertFalse(userprofile.getAge())
 
     def test_user_profile_deleted_on_user_deleted(self):
         user = self._create_test_user()
