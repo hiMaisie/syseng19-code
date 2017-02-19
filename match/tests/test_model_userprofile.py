@@ -14,61 +14,61 @@ class UserProfileModelTests(TestCase):
     # Ensure a user profile is created when a user is created.
     def test_user_profile_created(self):
         user = self._create_test_user()
-        userProfile = user.userprofile
+        userProfile = user.profile
         self.assertIsNotNone(userProfile)
 
     def test_user_profile_join_date_set_correctly(self):
         user = self._create_test_user()
         try:
-            user.userprofile.joinDate = date.today() - timedelta(days=365)
-            user.userprofile.full_clean()
+            user.profile.joinDate = date.today() - timedelta(days=365)
+            user.profile.full_clean()
         except ValidationError:
             self.fail("Error validating")
 
     def test_user_profile_join_date_set_in_future(self):
         user = self._create_test_user()
         with self.assertRaises(ValidationError):
-            user.userprofile.joinDate = date.today() + timedelta(days=30)
-            user.userprofile.full_clean()
+            user.profile.joinDate = date.today() + timedelta(days=30)
+            user.profile.full_clean()
 
     def test_user_profile_years_worked_calculated_correctly(self):
-        userprofile = self._create_test_user().userprofile
-        userprofile.joinDate = date.today() - timedelta(days=(366*2))
-        self.assertEqual(userprofile.getYearsWorked(), 2)
+        profile = self._create_test_user().profile
+        profile.joinDate = date.today() - timedelta(days=(366*2))
+        self.assertEqual(profile.getYearsWorked(), 2)
 
     def test_user_profile_years_worked_less_than_one_year(self):
-        userprofile = self._create_test_user().userprofile
-        userprofile.joinDate = date.today() - timedelta(days=(20))
-        self.assertEqual(userprofile.getYearsWorked(), 0)
+        profile = self._create_test_user().profile
+        profile.joinDate = date.today() - timedelta(days=(20))
+        self.assertEqual(profile.getYearsWorked(), 0)
 
     def test_user_profile_years_worked_null_when_join_date_null(self):
-        userprofile = self._create_test_user().userprofile
-        self.assertFalse(userprofile.getYearsWorked())
+        profile = self._create_test_user().profile
+        self.assertFalse(profile.getYearsWorked())
 
     def test_user_profile_dob_set_correctly(self):
-        userprofile = self._create_test_user().userprofile
+        profile = self._create_test_user().profile
         try:
-            userprofile.dateOfBirth = date.today() - timedelta(days=365)
-            userprofile.full_clean()
+            profile.dateOfBirth = date.today() - timedelta(days=365)
+            profile.full_clean()
         except ValidationError:
             self.fail("Date of birth validation failing valid input")
 
     # Users should not be able to be born in the future. Yet.
     def test_user_profile_dob_set_in_future(self):
-        userprofile = self._create_test_user().userprofile
+        profile = self._create_test_user().profile
         with self.assertRaises(ValidationError):
-            userprofile.dateOfBirth = date.today() + timedelta(days=1)
-            userprofile.full_clean()
+            profile.dateOfBirth = date.today() + timedelta(days=1)
+            profile.full_clean()
 
     def test_user_profile_age_calculated_correctly(self):
-        userprofile = self._create_test_user().userprofile
+        profile = self._create_test_user().profile
         # set dob to >1 year ago. so age should be 1
-        userprofile.dateOfBirth = date.today() - timedelta(days=368)
-        self.assertEqual(userprofile.getAge(), 1)
+        profile.dateOfBirth = date.today() - timedelta(days=368)
+        self.assertEqual(profile.getAge(), 1)
 
     def test_user_profile_age_null_when_dob_null(self):
-        userprofile = self._create_test_user().userprofile
-        self.assertFalse(userprofile.getAge())
+        profile = self._create_test_user().profile
+        self.assertFalse(profile.getAge())
 
     def test_user_profile_deleted_on_user_deleted(self):
         user = self._create_test_user()

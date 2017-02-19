@@ -12,7 +12,7 @@ class ProgrammeModelTests(TestCase):
             last_name="Smith",
             first_name="John"
         )
-        self._userprofile = User.objects.get(email="test@example.com").userprofile
+        self._userprofile = User.objects.get(email="test@example.com").profile
 
     def test_programme_created(self):
         self._create_test_programme()

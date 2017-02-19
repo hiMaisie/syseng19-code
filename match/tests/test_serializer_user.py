@@ -36,8 +36,7 @@ class UserSerializerTests(TestCase):
             'password': 'hunter2'
         }
         serializer = UserSerializer(data=data)
-        if serializer.is_valid():
-            self.fail("Profie not present, should have failed")
+        self.assertTrue(serializer.is_valid())
 
     def test_serializer_user_password_hashed(self):
         data = {
