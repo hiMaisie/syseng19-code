@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 import json
 from . import models
 
@@ -57,3 +57,7 @@ class UserSerializer(serializers.ModelSerializer):
         #     userproflie = models.UserProfile.objects.create(**userprofile_data)
 
         return user
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
