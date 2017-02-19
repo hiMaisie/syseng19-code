@@ -29,7 +29,7 @@ class Tag(models.Model):
         return self.name
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(User, related_name="profile")
     joinDate = models.DateField(default=date.today, null=True, validators=[user_validators.validate_joinDate])
     position = models.CharField(max_length=30, blank=True, default="")
     department = models.CharField(max_length=30, blank=True, default="")
@@ -51,6 +51,11 @@ class UserProfile(models.Model):
         if not self.joinDate:
             return None
         return (date.today() - self.joinDate).days // 365.25
+
+    @property
+    def profileImageUrl(self):
+        if self.profileImage and hasattr(self.profileImage, 'url'):
+            return self.image.url
 
 class Programme(models.Model):
     programmeId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)

@@ -1,4 +1,5 @@
 from django.contrib.auth.models import Group, User
+from django.db.models import Q
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from match.models import *
@@ -17,7 +18,8 @@ class JSONResponse(HttpResponse):
 
 class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, TokenHasReadWriteScope]
-    queryset = User.objects.all()
+    queryset = User.objects.select_related('profile').all()
+
     serializer_class = UserSerializer
 
 class GroupViewSet(viewsets.ModelViewSet):
@@ -25,9 +27,6 @@ class GroupViewSet(viewsets.ModelViewSet):
     required_scopes = ['groups']
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-
-router = routers.DefaultRouter()
-router.register(r'users', UserViewSet)
 
 @csrf_exempt
 def tag_list(request):
@@ -43,3 +42,7 @@ def tag_list(request):
             serializer.save()
             return JSONResponse(serializer.data, status=201)
         return JSONResponse(serializer.errors, status=400)
+
+router = routers.DefaultRouter()
+router.register(r'users', UserViewSet)
+router.register(r'groups', GroupViewSet)
