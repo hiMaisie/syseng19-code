@@ -44,5 +44,5 @@ def tag_list(request):
         return JSONResponse(serializer.errors, status=400)
 
 router = routers.DefaultRouter()
-router.register(r'users', UserViewSet, name="users")
-router.register(r'groups', GroupViewSet, name="groups")
+router.register(r'users', UserViewSet, base_name='user')
+router.register(r'groups', GroupViewSet, base_name='group')
