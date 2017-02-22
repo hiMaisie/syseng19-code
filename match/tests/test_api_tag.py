@@ -19,4 +19,4 @@ class TagAPITests(APITestCase):
         Tag(name="My Tag").save()
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(json.loads(response.content), [{'name': 'My Tag'}])
+        self.assertEqual(json.loads(response.content.decode('utf-8')), [{'name': 'My Tag'}])
