@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
     'match',
     'oauth2_provider',
     'rest_framework'
@@ -140,7 +141,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 OAUTH2_PROVIDER = {
-    'SCOPES': {'read': 'Read scope', 'write': 'Write scope', 'groups': 'Access to your groups'}
+    'SCOPES': {'read': 'Read scope', 'write': 'Write scope', 'groups': 'Access to your groups'},
+    'OAUTH2_BACKEND_CLASS': 'mentormatch.OAuthCore.OAuthLibCore'
 }
 
 REST_FRAMEWORK = {
