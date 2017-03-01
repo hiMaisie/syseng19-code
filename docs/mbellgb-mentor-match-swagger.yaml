@@ -5,7 +5,7 @@ info:
   description: This is an example of using OAuth2 Password Flow in a specification to describe security to your API.
 schemes:
  - https
- 
+
 # Under securityDefinitions we declare which security schemes can be used.
 # These definitions do not affect to the operations, but can be applied
 # using the 'security' key at the global level or the operation level.
@@ -17,14 +17,14 @@ securityDefinitions:
   password:
     type: oauth2
     # This should be updated to the Token URL of your OAuth provider.
-    tokenUrl: http://example.com/oauth/token
+    tokenUrl: http://api.dev.mbell.me/auth/token/
     flow: password
     scopes:
       write: allows modifying resources
       read: allows reading resources
       admin: allows admin control, if the user is an admin.
 
-# Here we apply the security flow called 'password' globally to all the opeartions in the spec. 
+# Here we apply the security flow called 'password' globally to all the opeartions in the spec.
 # This security scheme is defined above in the 'securityDefinitions' section.
 # Global security can be overriden an operation level as seen in the example below
 security:
@@ -77,7 +77,7 @@ paths:
       responses:
         200:
           description: "successful operation"
-        403:  
+        403:
           description: "user is not the same as the logged in user."
         404:
           description: "user not found"
@@ -127,7 +127,7 @@ paths:
           description: "image size larger than server's global maxFileUploadSize property, should be scaled down."
         404:
           description: "user not found"
-        403:  
+        403:
           description: "user is not the same as the logged in user."
   /user/{userId}/mentorships:
     get:
@@ -179,7 +179,7 @@ paths:
           description: "successful operation"
           schema:
             $ref: '#/definitions/userMentorship'
-        403: 
+        403:
           description: "user does not have access (not same as logged in user or user isn't admin"
         404:
           description: "user not found or mentorship not found"
@@ -193,7 +193,7 @@ paths:
       responses:
         200:
           description: OK
-          
+
 definitions:
   user:
     type: object
