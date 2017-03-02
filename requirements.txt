@@ -2,6 +2,7 @@ appdirs==1.4.0
 Django==1.10.5
 django-braces==1.11.0
 django-dotenv==1.4.1
+django-extensions==1.7.7
 django-oauth-toolkit==0.11.0
 djangorestframework==3.5.3
 netifaces==0.10.5

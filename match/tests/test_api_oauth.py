@@ -60,8 +60,6 @@ class OAuthTest(TestCaseUtils, TestCase):
             data=req_data,
             **auth_headers
         )
-        print("url: %s" % url)
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_can_get_token_with_json(self):
