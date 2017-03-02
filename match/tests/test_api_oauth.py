@@ -94,7 +94,18 @@ class OAuthTest(TestCaseUtils, TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(len(json.loads(response.content.decode('utf-8'))) == 3)
 
-        # TODO: Add 'me' endpoint
+    def test_cant_access_user_list_if_not_admin(self):
+        token = AccessToken.objects.create(
+            user=self.test_user,
+            token='123456789',
+            application=self.application,
+            expires=timezone.now() + timedelta(days=1),
+            scope='read write',
+        )
+        auth = self._get_auth_header(token=token.token)
+        url = reverse('user-list')
+        response = self.client.get(url, HTTP_AUTHORIZATION=auth)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def _get_auth_header(self, token=None):
         return "Bearer {0}".format(token or self.access_token.token)
