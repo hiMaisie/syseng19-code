@@ -64,9 +64,17 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'oauth2_provider.middleware.OAuth2TokenMiddleware'
 ]
+
+AUTHENTICATION_BACKENDS = (
+    # Needed for django-admin login!!
+    'django.contrib.auth.backends.ModelBackend',
+    'oauth2_provider.backends.OAuth2Backend',
+)
 
 CORS_ORIGIN_ALLOW_ALL = True
 
@@ -145,13 +153,19 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 OAUTH2_PROVIDER = {
-    'SCOPES': {'read': 'Read scope', 'write': 'Write scope', 'groups': 'Access to your groups'},
+    'SCOPES': {
+        'read': 'Read your user details and associated mentorships',
+        'write': 'Modify your profile and sign up for mentorships',
+        'messages': 'View and send messages to mentors/mentees',
+        'staff': 'Perform staff operations (if you\'re a staff member), like creating/modifying your mentorships',
+        'admin': 'Perform administration operations if you\'re an admin.',
+    },
     'OAUTH2_BACKEND_CLASS': 'mentormatch.OAuthCore.OAuthLibCore'
 }
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated'
+        'rest_framework.permissions.IsAuthenticated',
     ),
 
     'DEFAULT_AUTHENTICATION_CLASSES': (

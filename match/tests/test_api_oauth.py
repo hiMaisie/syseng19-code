@@ -86,7 +86,7 @@ class OAuthTest(TestCaseUtils, TestCase):
             token='123456789',
             application=self.application,
             expires=timezone.now() + timedelta(days=1),
-            scope='read write',
+            scope='read write admin',
         )
         auth = self._get_auth_header(token=token.token)
         url = reverse('user-list')
@@ -100,12 +100,25 @@ class OAuthTest(TestCaseUtils, TestCase):
             token='123456789',
             application=self.application,
             expires=timezone.now() + timedelta(days=1),
+            scope='read write admin',
+        )
+        auth = self._get_auth_header(token=token.token)
+        url = reverse('user-list')
+        response = self.client.get(url, HTTP_AUTHORIZATION=auth)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cant_access_user_list_if_no_admin_scope(self):
+        token = AccessToken.objects.create(
+            user=self.admin_user,
+            token='123456789',
+            application=self.application,
+            expires=timezone.now() + timedelta(days=1),
             scope='read write',
         )
         auth = self._get_auth_header(token=token.token)
         url = reverse('user-list')
         response = self.client.get(url, HTTP_AUTHORIZATION=auth)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def _get_auth_header(self, token=None):
         return "Bearer {0}".format(token or self.access_token.token)
