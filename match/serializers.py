@@ -49,6 +49,19 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
+    def update(self, instance, validated_data):
+        userprofile_data = validated_data.pop('profile', {})
+        validated_data.pop('email', "")
+        # instance.update(validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if userprofile_data:
+            for attr, value in userprofile_data.items():
+                setattr(instance.profile, attr, value)
+            instance.profile.save()
+        return instance
+
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
