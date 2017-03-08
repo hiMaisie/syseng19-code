@@ -2,7 +2,7 @@ swagger: '2.0'
 info:
   version: "0.1.0"
   title: ATOS Mentor Match
-  description: This is an example of using OAuth2 Password Flow in a specification to describe security to your API.
+  description: API documentation for the ATOS Mentor Match project.
 schemes:
  - https
 
@@ -20,9 +20,23 @@ securityDefinitions:
     tokenUrl: http://api.dev.mbell.me/auth/token/
     flow: password
     scopes:
-      write: allows modifying resources
-      read: allows reading resources
-      admin: allows admin control, if the user is an admin.
+      read: Read your user details and associated mentorships
+      write: Modify your profile and sign up for mentorships
+      messages: View and send messages to mentors/mentees
+      staff: Perform staff operations (if you're a staff member), like creating/modifying your mentorships
+      admin: Perform adminisration options if you're an admin
+  authcode:
+    type: oauth2
+    # This should be updated to the Token URL of your OAuth provider.
+    tokenUrl: http://api.dev.mbell.me/auth/token/
+    authorizationUrl: http://api.dev.mbell.me/auth/token/
+    flow: accessCode
+    scopes:
+      read: Read your user details and associated mentorships
+      write: Modify your profile and sign up for mentorships
+      messages: View and send messages to mentors/mentees
+      staff: Perform staff operations (if you're a staff member), like creating/modifying your mentorships
+      admin: Perform adminisration options if you're an admin
 
 # Here we apply the security flow called 'password' globally to all the opeartions in the spec.
 # This security scheme is defined above in the 'securityDefinitions' section.
@@ -31,14 +45,58 @@ security:
   - password:
     - read
     - write
-    - admin
 tags:
 - name: "user"
   description: "operations concerning a user directly"
 - name: "mentorship"
   description: "operations concerning a mentorship"
 paths:
-  /user/{userId}:
+  /user/:
+    get:
+      tags:
+      - "user"
+      summary: Get list of users
+      description: Returns a list of all users.
+      security:
+      - password:
+        - read
+        - admin
+      operationId: listUsers
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/user'
+        401:
+          description: "you are not logged in"
+        403:
+          description: "You do not have admin privileges"
+    post:
+      tags:
+      - "user"
+      summary: Create new user
+      description: Create a new user.
+      security: []
+      operationId: createUser
+      produces: ['application/json']
+      parameters:
+      - name: "user"
+        in: body
+        description: "details of the user to add"
+        required: true
+        schema:
+          $ref: '#/definitions/user_signup_object'
+      consumes: ['application/json']
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: '#/definitions/user'
+  /user/{userId}/:
     get:
       tags:
       - "user"
@@ -60,7 +118,7 @@ paths:
             $ref: '#/definitions/user'
         404:
           description: "user not found"
-    put:
+    patch:
       tags:
       - "user"
       summary: Update user by id
@@ -74,6 +132,12 @@ paths:
         description: "id of the user to update"
         required: true
         type: "integer"
+      - name: "user"
+        in: body
+        description: "updated user details (those that have changed)"
+        required: true
+        schema:
+          $ref: '#/definitions/user'
       responses:
         200:
           description: "successful operation"
@@ -81,7 +145,7 @@ paths:
           description: "user is not the same as the logged in user."
         404:
           description: "user not found"
-  /user/{userId}/image:
+  /user/{userId}/image/:
     get:
       tags:
       - "user"
@@ -109,6 +173,7 @@ paths:
       summary: Set user profile image by id
       description: "Updates an existing user's profile image. Can only be done by the logged in user or by an admin. Maxmimum file size determined by server's maxFileUploadSize property, whichcan be found within /info response."
       operationId: updateUserImageById
+      consumes: ["multipart/form-data"]
       parameters:
       - name: "userId"
         in: "path"
@@ -129,7 +194,7 @@ paths:
           description: "user not found"
         403:
           description: "user is not the same as the logged in user."
-  /user/{userId}/mentorships:
+  /user/{userId}/mentorships/:
     get:
       tags: ["user", "mentorship"]
       summary: Get user's mentorships
@@ -157,7 +222,7 @@ paths:
           description: "user does not have access (not same as logged in user or user isn't admin)"
         404:
           description: "user not found"
-  /user/{userId}/mentorships/{mentorshipId}:
+  /user/{userId}/mentorships/{mentorshipId}/:
     get:
       tags: ["user", "mentorship"]
       summary: Get specific user mentorship
@@ -183,6 +248,42 @@ paths:
           description: "user does not have access (not same as logged in user or user isn't admin"
         404:
           description: "user not found or mentorship not found"
+  /user/me/:
+    get:
+      tags:
+      - "user"
+      summary: Find logged in user
+      description: Returns the logged in user's profile.
+      operationId: getUserByLoggedIn
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: '#/definitions/user'
+        401:
+          description: "you are not logged in"
+    patch:
+      tags:
+      - "user"
+      summary: Update the logged in user.
+      description: Updates the logged in user's profile.
+      operationId: updateUserByLoggedIn
+      produces:
+      - "application/json"
+      parameters:
+      - name: "user"
+        in: body
+        description: "changed user details"
+        required: true
+        schema:
+          $ref: '#/definitions/user'
+      responses:
+        200:
+          description: "successful operation"
+        401:
+          description: "you are not logged in"
   /ping:
     get:
       summary: Server heartbeat operation
@@ -205,26 +306,58 @@ definitions:
         type: "string"
         example: "johnsmith@atos.com"
         description: "unique email address for the user."
-      name:
+      first_name:
         type: "string"
-        description: "the user's full name"
-        example: "John Smith"
-      preferredName:
+        description: "the user's first name"
+        example: "John"
+      last_name:
         type: "string"
-        description: "the user's preferred name. by default, the user's first name, but may be a shortened name instead."
+        description: "the user's last name"
+        example: "Smith"
+      profile:
+        $ref: '#/definitions/user_profile'
+  user_signup_object:
+    type: object
+    required: ['email', 'password']
+    properties:
+      email:
+        type: "string"
+        example: "johnsmith@atos.com"
+        description: "unique email address for the user."
+      password:
+        type: "string"
+        description: "the user's password"
+        example: "hunter2"
+      first_name:
+        type: "string"
+        description: "the user's first name"
+        example: "John"
+      last_name:
+        type: "string"
+        description: "the user's last name"
+        example: "Smith"
+      profile:
+        $ref: '#/definitions/user_profile'
+  user_profile:
+    type: object
+    properties:
       joinDate:
         type: "string"
-        format: "date-time"
+        format: "date"
         description: "the date the user joined the company"
+        example: "2017-01-01"
       position:
         type: "string"
         description: "the user's current job title"
+        example: "Manager"
       department:
         type: "string"
         description: "the user's current work department"
-      isAdmin:
-        type: "boolean"
-        description: "true if the user is an admin, false if not"
+        example: "IT"
+      bio:
+        type: "string"
+        description: "the user's description about themselves"
+        example: "I like people, places and things"
   userMentorship:
     type: object
     properties:
@@ -243,5 +376,5 @@ definitions:
         #TODO: Use reference to programme def
 
 # Added by API Auto Mocking Plugin
-host: virtserver.swaggerhub.com
+host: api.dev.mbell.me
 basePath: /

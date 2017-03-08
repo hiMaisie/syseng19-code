@@ -3,5 +3,6 @@ from match import views
 
 urlpatterns = [
     url(r'^tags/?$', views.tag.tag_list, name="tag_list"),
-    url(r'^users/', include(views.user))
+    url(r'^user/', include(views.user.urlpatterns))
+    # url(r'^user/', include(views.user.UserViewSet, namespace='users'))
 ]
