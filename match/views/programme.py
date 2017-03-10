@@ -14,14 +14,10 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProgrammeSerializer
 
-    def create(self, request, *args, **kwargs):
-        if self.user.is_staff:
-            return super(self.__class__, self).create(request, args, kwargs)
-
     def get_permissions(self):
         if self.action in ['create', 'partial_update', 'update', 'destroy']:
-            self.permission_classes = [TokenHasScope]
-            self.required_scopes = ['write staff']
+            self.permission_classes = [TokenHasScope, permissions.IsAdminUser]
+            self.required_scopes = ['write', 'staff']
         return super(self.__class__, self).get_permissions()
 
     def get_object(self, request, **kwargs):

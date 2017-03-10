@@ -46,9 +46,27 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
             'defaultCohortSize': 100,
             'createdBy': self.test_user.pk
         }
-        token = self._create_token(self.staff_user, 'write staff')
+        token = self._create_token(self.test_user, 'write staff')
         response = self.client.post(url, data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cant_create_programme_if_no_staff_scope(self):
+        url = reverse('programme-list')
+        data = {
+            'name': 'Test Programme',
+            'description': 'This is a test programme.',
+            'defaultCohortSize': 100,
+            'createdBy': self.staff_user.pk
+        }
+        token = self._create_token(self.staff_user, 'write')
+        response = self.client.post(url, data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_can_read_programme_list(self):
+        url = reverse('programme-list')
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     ## HELPER FUNCTIONS
 
