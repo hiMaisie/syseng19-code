@@ -38,17 +38,9 @@ class UserViewSet(viewsets.ModelViewSet):
                 return JSONResponse(serializer.data, status=status.HTTP_201_CREATED)
 
     def patch(self, request, *args, **kwargs):
-        # userdata = dict(request.data)
-        # userdata.pop("profile", None)
         serializer = UserSerializer(self.get_object(), data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        # if 'profile' in request.data:
-        #     up_serializer = UserProfileSerializer(self.get_object().profile, data=request.data.profile, partial=True)
-        #     up_serializer.is_valid(raise_exception=True)
-        #     up_serializer.save()
-        #     return JSONResponse(serializer.data)
-        # else:
         return JSONResponse(serializer.data)
 
     @decorators.detail_route()

@@ -10,6 +10,22 @@ class TagSerializer(serializers.ModelSerializer):
         model = models.Tag
         fields = ('name',)
 
+class ProgrammeSerializer(serializers.ModelSerializer):
+    # createdBy = UserSerializer(required=False)
+    createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+
+    class Meta:
+        model = models.Programme
+        fields = (
+            'programmeId',
+            'name',
+            'description',
+            'logo',
+            'bannerImage',
+            'defaultCohortSize',
+            'createdBy'
+        )
+
 class UserProfileSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, required=False)
     # profileImageUrl = serializers.SerializerMethodField()

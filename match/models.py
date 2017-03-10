@@ -64,7 +64,7 @@ class Programme(models.Model):
     logo = models.ImageField(upload_to=_get_image_path, blank=True, null=True)
     bannerImage = models.ImageField(upload_to=_get_image_path, blank=True, null=True)
     defaultCohortSize = models.IntegerField(default=100)
-    createdBy = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="programmes")
+    createdBy = models.ForeignKey(User, on_delete=models.CASCADE, related_name="programmes")
 
     def __str__(self):
         return self.name
@@ -79,7 +79,7 @@ class Cohort(models.Model):
     openDate = models.DateTimeField(default=timezone.now)
     closeDate = models.DateTimeField(default=_get_default_close_date)
     matchDate = models.DateTimeField(default=_get_default_match_date)
-    createdBy = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="cohorts")
+    createdBy = models.ForeignKey(User, on_delete=models.CASCADE, related_name="cohorts")
 
     def __str__(self):
         return "%s - %s" % (self.programme.name, self.openDate)
