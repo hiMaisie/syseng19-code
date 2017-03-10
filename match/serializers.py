@@ -10,6 +10,22 @@ class TagSerializer(serializers.ModelSerializer):
         model = models.Tag
         fields = ('name',)
 
+class CohortSerializer(serializers.ModelSerializer):
+    createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    programme = serializers.PrimaryKeyRelatedField(queryset=models.Programme.objects.all())
+
+    class Meta:
+        model = models.Cohort
+        fields = (
+            'cohortId',
+            'programme',
+            'cohortSize',
+            'openDate',
+            'closeDate',
+            'matchDate',
+            'createdBy'
+        )
+
 class ProgrammeSerializer(serializers.ModelSerializer):
     # createdBy = UserSerializer(required=False)
     createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
@@ -25,6 +41,9 @@ class ProgrammeSerializer(serializers.ModelSerializer):
             'defaultCohortSize',
             'createdBy'
         )
+
+    # def create(self, validated_data):
+    #
 
 class UserProfileSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, required=False)
