@@ -3,6 +3,7 @@ from match.models import Programme
 from match.serializers import ProgrammeSerializer
 
 from django.conf.urls import include,url
+from django.http import Http404
 from oauth2_provider.ext.rest_framework import TokenHasReadWriteScope, TokenHasScope
 from rest_framework import decorators,permissions,routers,status,viewsets
 from rest_framework.routers import DefaultRouter
@@ -14,22 +15,31 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProgrammeSerializer
 
+    lookup_field = 'programmeId'
+
     def get_permissions(self):
-        if self.action in ['create', 'partial_update', 'update', 'destroy']:
+        if self.action in ['create', 'partial_update', 'destroy']:
             self.permission_classes = [TokenHasScope, permissions.IsAdminUser]
             self.required_scopes = ['write', 'staff']
         return super(self.__class__, self).get_permissions()
 
-    def get_object(self, request, **kwargs):
+    def retrieve(self, request, **kwargs):
         serializer = ProgrammeSerializer(Programme.objects.get(programmeId=self.kwargs['programmeId']))
         return JSONResponse(serializer.data)
 
-    def patch(self, request, **kwargs):
+    def partial_update(self, request, **kwargs):
         p = Programme.objects.get(programmeId=self.kwargs['programmeId'])
-        serializer = ProgrammeSerializer(p, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return JSONResponse(serializer.data)
+        if self.request.user == p.createdBy:
+            return super(self.__class__, self).partial_update(request, **kwargs)
+        else:
+            return JSONResponse({'detail': 'You do not have permission to perform this action. (you do not own the resource)'}, status=status.HTTP_403_FORBIDDEN)
+
+    def destroy(self, request, **kwargs):
+        p = Programme.objects.get(programmeId=self.kwargs['programmeId'])
+        if self.request.user == p.createdBy:
+            return super(self.__class__, self).destroy(request, **kwargs)
+        else:
+            return JSONResponse({'detail': 'You do not have permission to perform this action. (you do not own the resource)'}, status=status.HTTP_403_FORBIDDEN)
 
 programme_list = ProgrammeViewSet.as_view({
     'get': 'list',
@@ -37,8 +47,8 @@ programme_list = ProgrammeViewSet.as_view({
 })
 
 programme_detail = ProgrammeViewSet.as_view({
-    'get': 'get_object',
-    'patch': 'patch',
+    'get': 'retrieve',
+    'patch': 'partial_update',
     'delete': 'destroy'
 })
 

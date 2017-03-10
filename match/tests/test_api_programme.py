@@ -68,6 +68,122 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
         response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_cant_read_programme_list_if_no_auth(self):
+        url = reverse('programme-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_cant_read_programme_list_if_no_read_scope(self):
+        url = reverse('programme-list')
+        token = self._create_token(self.test_user, 'write')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_can_read_specific_programme(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        serializer = ProgrammeSerializer(programme)
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json.loads(response.content.decode('utf-8')), serializer.data)
+
+    def test_can_patch_specific_programme_if_owner(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        patch_data = { 'name': 'Renamed Test Programme' }
+        token = self._create_token(self.staff_user, 'write staff')
+        response = self.client.patch(url, data=patch_data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        programme = Programme.objects.get(programmeId=programme.programmeId)
+        self.assertEqual(programme.name, 'Renamed Test Programme')
+
+    def test_cant_patch_specific_programme_if_no_staff_scope(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        patch_data = { 'name': 'Renamed Test Programme' }
+        token = self._create_token(self.staff_user, 'write')
+        response = self.client.patch(url, data=patch_data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cant_patch_specific_programme_if_not_owner(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.test_user
+        )
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        patch_data = { 'name': 'Renamed Test Programme' }
+        token = self._create_token(self.staff_user, 'write')
+        response = self.client.patch(url, data=patch_data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_can_delete_specific_programme_if_owner(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        token = self._create_token(self.staff_user, 'write staff')
+        response = self.client.delete(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        with self.assertRaises(Programme.DoesNotExist):
+            programme = Programme.objects.get(programmeId=programme.programmeId)
+
+    def test_cant_delete_specific_programme_if_no_staff_scope(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        token = self._create_token(self.staff_user, 'read')
+        response = self.client.delete(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cant_delete_specific_programme_if_no_read_scope(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        token = self._create_token(self.staff_user, 'staff')
+        response = self.client.delete(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cant_delete_specific_programme_if_not_owner(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.test_user
+        )
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        token = self._create_token(self.staff_user, 'write staff')
+        response = self.client.delete(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     ## HELPER FUNCTIONS
 
     def _get_auth_header(self, token=None):
