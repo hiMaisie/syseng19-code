@@ -23,11 +23,8 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
             self.required_scopes = ['write', 'staff']
         return super(self.__class__, self).get_permissions()
 
-    def retrieve(self, request, **kwargs):
-        serializer = ProgrammeSerializer(Programme.objects.get(programmeId=self.kwargs['programmeId']))
-        return JSONResponse(serializer.data)
-
     def partial_update(self, request, **kwargs):
+        # Prevent non-owner from patching this object.
         p = Programme.objects.get(programmeId=self.kwargs['programmeId'])
         if self.request.user == p.createdBy:
             return super(self.__class__, self).partial_update(request, **kwargs)
@@ -35,6 +32,7 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
             return JSONResponse({'detail': 'You do not have permission to perform this action. (you do not own the resource)'}, status=status.HTTP_403_FORBIDDEN)
 
     def destroy(self, request, **kwargs):
+        # Prevent non-owner from deleting this object.
         p = Programme.objects.get(programmeId=self.kwargs['programmeId'])
         if self.request.user == p.createdBy:
             return super(self.__class__, self).destroy(request, **kwargs)
