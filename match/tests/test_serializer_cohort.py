@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.utils import timezone
 from match.models import Cohort,Programme
 from match.serializers import CohortSerializer,UserSerializer
+from datetime import timedelta
 import json
 
 class UserSerializerTests(TestCase):
@@ -32,9 +33,11 @@ class UserSerializerTests(TestCase):
         data = {
             'programme': self.programme.programmeId,
             'cohortSize': 200,
-            'createdBy':self.user.pk
+            'createdBy': self.user.pk,
         }
         serializer = CohortSerializer(data=data)
         self.assertTrue(serializer.is_valid())
         cohort = serializer.save()
         self.assertTrue(cohort.openDate, timezone.now())
+        self.assertTrue(cohort.closeDate, timezone.now() + timedelta(days=14))
+        self.assertTrue(cohort.matchDate, timezone.now() + timedelta(days=21))
