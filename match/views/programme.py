@@ -1,9 +1,10 @@
 from .JSONResponse import JSONResponse
-from match.models import Programme
-from match.serializers import ProgrammeSerializer
+from match.models import Cohort,Programme
+from match.serializers import CohortSerializer,ProgrammeSerializer
 
 from django.conf.urls import include,url
 from django.http import Http404
+import json
 from oauth2_provider.ext.rest_framework import TokenHasReadWriteScope, TokenHasScope
 from rest_framework import decorators,permissions,routers,status,viewsets
 from rest_framework.routers import DefaultRouter
@@ -45,6 +46,31 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
         else:
             return JSONResponse({'detail': 'You do not have permission to perform this action. (you do not own the resource)'}, status=status.HTTP_403_FORBIDDEN)
 
+    # Cohort methods
+    def cohort_list(self, request, **kwargs):
+        programme = Programme.objects.get(programmeId=kwargs['programmeId'])
+        if not programme:
+            return JSONResponse({'detail': 'Programme not found'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            cohorts = Cohort.objects.filter(programme=programme.programmeId)
+            serializer = CohortSerializer(data=cohorts, many=True)
+            serializer.is_valid()
+            return JSONResponse(serializer.data, status=status.HTTP_200_OK)
+        except Cohort.DoesNotExist:
+            return JSONResponse(None, status=status.HTTP_204_NO_CONTENT)
+
+    @decorators.detail_route(methods=['post'], required_scopes=['write admin'])
+    def cohort_create(self, request, **kwargs):
+        programme = Programme.objects.get(programmeId=kwargs['programmeId'])
+        if not programme:
+            return JSONResponse({'detail': 'Programme not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CohortSerializer(data=request.data)
+        serializer.programme = programme.programmeId
+        if not serializer.is_valid():
+            return JSONResponse({'detail': 'Your request data is invalid.', 'errors':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return JSONResponse(serializer.data, status=status.HTTP_201_CREATED)
+
 programme_list = ProgrammeViewSet.as_view({
     'get': 'list',
     'post': 'create'
@@ -56,7 +82,13 @@ programme_detail = ProgrammeViewSet.as_view({
     'delete': 'destroy'
 })
 
+programme_cohort = ProgrammeViewSet.as_view({
+    'post': 'cohort_create',
+    'get': 'cohort_list',
+})
+
 urlpatterns = [
     url(r'^$', programme_list, name='programme-list'),
-    url(r'^(?P<programmeId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', programme_detail, name='programme-detail')
+    url(r'^(?P<programmeId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/cohorts', programme_cohort, name='programme-cohort-list'),
+    url(r'^(?P<programmeId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', programme_detail, name='programme-detail'),
 ]
