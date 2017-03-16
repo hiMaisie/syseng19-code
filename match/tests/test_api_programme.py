@@ -108,6 +108,22 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
         programme = Programme.objects.get(programmeId=programme.programmeId)
         self.assertEqual(programme.name, 'Renamed Test Programme')
 
+    def test_cant_patch_programme_id(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        old_id = programme.programmeId
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        patch_data = { 'programmeId': '12345678-90ab-cdef-1234-567890abcdef' }
+        token = self._create_token(self.staff_user, 'write staff')
+        response = self.client.patch(url, data=patch_data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # ensure doesn't change
+        self.assertEqual(json.loads(response.content.decode('utf-8'))['programmeId'], str(old_id))
+
     def test_cant_patch_specific_programme_if_no_staff_scope(self):
         programme = Programme.objects.create(
             name = 'Test Programme',
