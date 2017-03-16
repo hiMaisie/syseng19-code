@@ -48,11 +48,18 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = UserSerializer(request.user)
         return JSONResponse(serializer.data)
 
+    @decorators.detail_route(required_scopes=['write'])
+    def partial_me(self, request, **kwargs):
+        serializer =UserSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return JSONResponse(serializer.data)
+
     # remove permissions for user creation.
     def get_permissions(self):
         if self.action == 'create':
             self.permission_classes = [permissions.AllowAny,]
-        elif self.action == 'me':
+        elif self.action in ['me', 'partial_me']:
             self.permission_classes = [permissions.IsAuthenticated]
         return super(self.__class__, self).get_permissions()
 
@@ -63,8 +70,7 @@ user_list = UserViewSet.as_view({
 
 user_me = UserViewSet.as_view({
     'get': 'me',
-    #TODO: Implement this
-    # 'patch': 'partial_me'
+    'patch': 'partial_me'
 })
 
 user_detail = UserViewSet.as_view({

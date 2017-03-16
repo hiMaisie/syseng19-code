@@ -56,6 +56,19 @@ class UserAPITests(TestCaseUtils, APITestCase):
         response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_patch_user_if_admin(self):
+        url = reverse('user-detail', kwargs={'pk': self.test_user.pk})
+        token = self._create_token(self.admin_user, 'read write admin')
+        data = {
+            'first_name': 'Bill',
+            'profile': {
+                'position': 'Engineer'
+            }
+        }
+        response = self.client.patch(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json.loads(response.content.decode('utf-8'))['profile']['position'], 'Engineer')
+
     def test_get_me(self):
         url = reverse('user-me')
         token = self._create_token(self.test_user, 'read')
@@ -64,6 +77,18 @@ class UserAPITests(TestCaseUtils, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json.loads(response.content.decode('utf-8')), serializer.data)
 
+    def test_patch_me(self):
+        url = reverse('user-me')
+        token = self._create_token(self.test_user, 'write')
+        data = {
+            'profile': {
+                'bio': 'Some different bio'
+            }
+        }
+        response = self.client.patch(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(res['profile']['bio'], 'Some different bio')
     ## HELPER FUNCTIONS
 
     def _get_auth_header(self, token=None):
