@@ -38,6 +38,21 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
         response = self.client.post(url, data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_can_create_programme_with_implicit_author(self):
+        url = reverse('programme-list')
+        data = {
+            'name': 'Test Programme',
+            'description': 'This is a test programme',
+            'defaultCohortSize': 100
+        }
+        token = self._create_token(self.staff_user, 'write staff')
+        response = self.client.post(url, data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        print(response.content)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response_data = ProgrammeSerializer(data=json.loads(response.content.decode('utf-8')))
+        self.assertTrue(response_data.is_valid())
+        self.assertEqual(response_data.data['createdBy'], self.staff_user.pk)
+
     def test_cant_create_programme_if_not_staff(self):
         url = reverse('programme-list')
         data = {
