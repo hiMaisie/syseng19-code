@@ -23,6 +23,12 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
             self.required_scopes = ['write', 'staff']
         return super(self.__class__, self).get_permissions()
 
+    def create(self, request, **kwargs):
+        # implicitly add createdBy attribute
+        if not 'createdBy' in request.data:
+            request.data['createdBy'] = request.user.pk
+        return super(self.__class__, self).create(request, **kwargs)
+
     def partial_update(self, request, **kwargs):
         # Prevent non-owner from patching this object.
         p = Programme.objects.get(programmeId=self.kwargs['programmeId'])
