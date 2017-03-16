@@ -69,6 +69,17 @@ class UserAPITests(TestCaseUtils, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json.loads(response.content.decode('utf-8'))['profile']['position'], 'Engineer')
 
+    def test_cant_patch_user_id(self):
+        url = reverse('user-detail', kwargs={'pk': self.test_user.pk})
+        token = self._create_token(self.admin_user, 'read write admin')
+        data = {
+            'id': 13
+        }
+        response = self.client.patch(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # check unchanged
+        self.assertEqual(json.loads(response.content.decode('utf-8'))['id'], self.test_user.pk)
+
     def test_get_me(self):
         url = reverse('user-me')
         token = self._create_token(self.test_user, 'read')
