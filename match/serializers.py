@@ -79,7 +79,7 @@ class CohortSerializer(serializers.ModelSerializer):
         )
 
 class ProgrammeSerializer(serializers.ModelSerializer):
-    createdBy = UserSerializer(required=False)
+    createdBy = UserSerializer(required=False, read_only=True)
     # createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
 
     class Meta:
@@ -93,9 +93,6 @@ class ProgrammeSerializer(serializers.ModelSerializer):
             'defaultCohortSize',
             'createdBy'
         )
-
-    # def create(self, validated_data):
-    #
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:

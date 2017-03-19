@@ -1,6 +1,6 @@
 from .JSONResponse import JSONResponse
 from match.models import Cohort,Programme
-from match.serializers import CohortSerializer,ProgrammeSerializer
+from match.serializers import CohortSerializer,ProgrammeSerializer,UserSerializer
 
 from django.conf.urls import include,url
 from django.http import Http404
@@ -24,11 +24,10 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
             self.required_scopes = ['write', 'staff']
         return super(self.__class__, self).get_permissions()
 
-    def create(self, request, **kwargs):
-        # implicitly add createdBy attribute
-        if not 'createdBy' in request.data:
-            request.data['createdBy'] = request.user.pk
-        return super(self.__class__, self).create(request, **kwargs)
+    def perform_create(self, serializer):
+        if not "createdBy" in serializer.validated_data:
+            serializer.save(createdBy=self.request.user)
+        serializer.save()
 
     def partial_update(self, request, **kwargs):
         # Prevent non-owner from patching this object.
