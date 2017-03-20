@@ -64,13 +64,12 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
         if not programme:
             return JSONResponse({'detail': 'Programme not found'}, status=status.HTTP_404_NOT_FOUND)
         serializer = CohortSerializer(data=request.data)
-        serializer.programme = programme.programmeId
         if not serializer.is_valid():
             return JSONResponse({'detail': 'Your request data is invalid.', 'errors':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         if not "createdBy" in serializer.validated_data:
-            serializer.save(createdBy=self.request.user)
+            serializer.save(createdBy=self.request.user, programme=programme)
         else:
-            serializer.save()
+            serializer.save(programme=programme)
         return JSONResponse(serializer.data, status=status.HTTP_201_CREATED)
 
 programme_list = ProgrammeViewSet.as_view({

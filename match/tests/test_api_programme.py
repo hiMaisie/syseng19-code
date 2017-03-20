@@ -50,7 +50,6 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         response_data = ProgrammeSerializer(data=json.loads(response.content.decode('utf-8')))
         if not response_data.is_valid():
-            print(response_data.errors)
             self.fail()
         p = Programme.objects.get(programmeId=json.loads(response.content.decode('utf-8'))['programmeId'])
         self.assertEqual(p.createdBy, self.staff_user)

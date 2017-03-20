@@ -29,16 +29,15 @@ class UserSerializerTests(TestCase):
             defaultCohortSize = 100,
             createdBy = self.user)
 
-    def test_serialize_valid_cohort(self):
+    def test_serializer_valid_cohort(self):
         data = {
-            'programme': self.programme.programmeId,
             'cohortSize': 200,
         }
         serializer = CohortSerializer(data=data)
         self.assertTrue(serializer.is_valid())
         # since it's only me developing I won't worry too much about the 
         # ease of use for now
-        cohort = serializer.save(createdBy=self.user)
+        cohort = serializer.save(createdBy=self.user, programme=self.programme)
         self.assertTrue(cohort.openDate, timezone.now())
         self.assertTrue(cohort.closeDate, timezone.now() + timedelta(days=14))
         self.assertTrue(cohort.matchDate, timezone.now() + timedelta(days=21))

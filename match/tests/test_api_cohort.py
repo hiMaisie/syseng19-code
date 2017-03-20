@@ -34,6 +34,28 @@ class CohortAPITests(TestCaseUtils, APITestCase):
         )
 
     def test_can_get_list_of_cohorts(self):
+        url = reverse('cohort-list')
+        cohort = Cohort.objects.create(
+            programme=self.programme,
+            cohortSize=200,
+            createdBy=self.test_user
+        )
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_can_get_specific_cohort(self):
+        cohort = Cohort.objects.create(
+            programme=self.programme,
+            cohortSize=200,
+            createdBy=self.test_user
+        )
+        url = reverse('cohort-detail', kwargs={'cohortId': cohort.cohortId})
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_can_get_list_of_programmes_cohorts(self):
         url = reverse('programme-cohort-list', kwargs={'programmeId': self.programme.programmeId})
         cohort = Cohort.objects.create(
             programme=self.programme,
@@ -47,7 +69,6 @@ class CohortAPITests(TestCaseUtils, APITestCase):
     def test_can_create_cohort_if_staff(self):
         url = reverse('programme-cohort-list', kwargs={'programmeId': self.programme.programmeId})
         data = {
-            'programme': self.programme.programmeId,
             'cohortSize': 200,
             'openDate': '2017-07-13 12:00:00',
             'closeDate': '2017-07-27 12:00:00',
@@ -61,7 +82,6 @@ class CohortAPITests(TestCaseUtils, APITestCase):
     def test_can_create_cohort_if_staff_implicit_author(self):
         url = reverse('programme-cohort-list', kwargs={'programmeId': self.programme.programmeId})
         data = {
-            'programme': self.programme.programmeId,
             'cohortSize': 200,
             'closeDate': '2017-07-27 12:00:00',
             'matchDate':'2017-08-03 12:00:00'
