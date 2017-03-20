@@ -10,22 +10,6 @@ class TagSerializer(serializers.ModelSerializer):
         model = models.Tag
         fields = ('name',)
 
-class ProgrammeSerializer(serializers.ModelSerializer):
-    # createdBy = UserSerializer(required=False)
-    createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-
-    class Meta:
-        model = models.Programme
-        fields = (
-            'programmeId',
-            'name',
-            'description',
-            'logo',
-            'bannerImage',
-            'defaultCohortSize',
-            'createdBy'
-        )
-
 class UserProfileSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, required=False)
     # profileImageUrl = serializers.SerializerMethodField()
@@ -77,6 +61,39 @@ class UserSerializer(serializers.ModelSerializer):
                 setattr(instance.profile, attr, value)
             instance.profile.save()
         return instance
+
+class ProgrammeSerializer(serializers.ModelSerializer):
+    createdBy = UserSerializer(required=False, read_only=True)
+
+    class Meta:
+        model = models.Programme
+        fields = (
+            'programmeId',
+            'name',
+            'description',
+            'logo',
+            'bannerImage',
+            'defaultCohortSize',
+            'createdBy'
+        )
+
+class CohortSerializer(serializers.ModelSerializer):
+    # createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    createdBy = UserSerializer(required=False, read_only=True)
+    # programme = serializers.PrimaryKeyRelatedField(queryset=models.Programme.objects.all())
+    programme = ProgrammeSerializer(required=False, read_only=True)
+
+    class Meta:
+        model = models.Cohort
+        fields = (
+            'cohortId',
+            'programme',
+            'cohortSize',
+            'openDate',
+            'closeDate',
+            'matchDate',
+            'createdBy'
+        )
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:

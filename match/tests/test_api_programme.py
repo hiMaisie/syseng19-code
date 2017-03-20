@@ -49,8 +49,10 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
         response = self.client.post(url, data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         response_data = ProgrammeSerializer(data=json.loads(response.content.decode('utf-8')))
-        self.assertTrue(response_data.is_valid())
-        self.assertEqual(response_data.data['createdBy'], self.staff_user.pk)
+        if not response_data.is_valid():
+            self.fail()
+        p = Programme.objects.get(programmeId=json.loads(response.content.decode('utf-8'))['programmeId'])
+        self.assertEqual(p.createdBy, self.staff_user)
 
     def test_cant_create_programme_if_not_staff(self):
         url = reverse('programme-list')

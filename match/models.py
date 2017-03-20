@@ -15,12 +15,13 @@ def _get_image_path(instance, filename):
 # Function that returns datetime two weeks after right now.
 # Default value for a cohort's sign up closing date.
 def _get_default_close_date():
-    return timezone.now() + timedelta.days(14)
+    # return timezone.now() + timedelta.days(14)
+    return timezone.now() + timedelta(days=14)
 
 # Function that returns datetime three weeks after right now.
 # Default value for a cohort's matching closing date.
 def _get_default_match_date():
-    return timezone.now() + timedelta.days(21)
+    return timezone.now() + timedelta(days=21)
 
 class Tag(models.Model):
     name = models.CharField(max_length=30, primary_key=True)
