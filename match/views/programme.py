@@ -67,7 +67,10 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
         serializer.programme = programme.programmeId
         if not serializer.is_valid():
             return JSONResponse({'detail': 'Your request data is invalid.', 'errors':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
+        if not "createdBy" in serializer.validated_data:
+            serializer.save(createdBy=self.request.user)
+        else:
+            serializer.save()
         return JSONResponse(serializer.data, status=status.HTTP_201_CREATED)
 
 programme_list = ProgrammeViewSet.as_view({

@@ -63,7 +63,8 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
 
 class CohortSerializer(serializers.ModelSerializer):
-    createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    # createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    createdBy = UserSerializer(required=False, read_only=True)
     programme = serializers.PrimaryKeyRelatedField(queryset=models.Programme.objects.all())
 
     class Meta:
@@ -80,7 +81,6 @@ class CohortSerializer(serializers.ModelSerializer):
 
 class ProgrammeSerializer(serializers.ModelSerializer):
     createdBy = UserSerializer(required=False, read_only=True)
-    # createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
 
     class Meta:
         model = models.Programme
