@@ -58,6 +58,20 @@ class CohortAPITests(TestCaseUtils, APITestCase):
         response = self.client.post(url, data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+    def test_can_create_cohort_if_staff_implicit_author(self):
+        url = reverse('programme-cohort-list', kwargs={'programmeId': self.programme.programmeId})
+        data = {
+            'programme': self.programme.programmeId,
+            'cohortSize': 200,
+            'closeDate': '2017-07-27 12:00:00',
+            'matchDate':'2017-08-03 12:00:00'
+        }
+        token = self._create_token(self.staff_user, 'read write staff')
+        response = self.client.post(url, data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response_data = CohortSerializer(data=json.loads(response.content.decode('utf-8')))
+        c = Cohort.objects.get(cohortId=json.loads(response.content.decode('utf-8'))['cohortId'])
+        self.assertEqual(c.createdBy, self.staff_user)
 
     ## HELPER FUNCTIONS
 
