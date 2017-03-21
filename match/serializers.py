@@ -78,9 +78,7 @@ class ProgrammeSerializer(serializers.ModelSerializer):
         )
 
 class CohortSerializer(serializers.ModelSerializer):
-    # createdBy = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     createdBy = UserSerializer(required=False, read_only=True)
-    # programme = serializers.PrimaryKeyRelatedField(queryset=models.Programme.objects.all())
     programme = ProgrammeSerializer(required=False, read_only=True)
 
     class Meta:
@@ -94,6 +92,40 @@ class CohortSerializer(serializers.ModelSerializer):
             'matchDate',
             'createdBy'
         )
+
+class ParticipantSerializer(serializers.ModelSerializer):
+    tags = TagSerializer(many=True, required=False)
+    user = UserSerializer(required=False, read_only=True)
+    cohort = CohortSerializer(required=False, read_only=True)
+
+    class Meta:
+        model = models.Participant
+        fields = (
+            'participantId',
+            'user',
+            'cohort',
+            'signUpDate',
+            'isMentor',
+            'isMatched',
+            'tags'
+        )
+        extra_kwargs = {
+            'signUpDate': { 'read_only': True },
+            'isMatched': { 'read_only': True }
+        }
+
+    def create(self, validated_data):
+        tags_data = []
+        if 'tags' in validated_data:
+            tags_data = validated_data.pop('tags')
+        participant = models.Participant.objects.create(**validated_data)
+        for tag in tags_data:
+            try:
+                obj = Tag.objects.get(name=tag.name)
+                participant.tags.add(obj)
+            except Tag.DoesNotExist:
+                participant.tags.create(**tag)
+        return participant
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
