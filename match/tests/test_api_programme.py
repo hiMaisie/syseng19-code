@@ -185,7 +185,7 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
             createdBy = self.staff_user
         )
         url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
-        token = self._create_token(self.staff_user, 'write staff')
+        token = self._create_token(self.staff_user, 'write admin')
         response = self.client.delete(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         with self.assertRaises(Programme.DoesNotExist):
