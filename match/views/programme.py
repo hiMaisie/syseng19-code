@@ -19,9 +19,12 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
     lookup_field = 'programmeId'
 
     def get_permissions(self):
-        if self.action in ['create', 'partial_update', 'destroy']:
+        if self.action in ['create', 'partial_update', 'cohort_create']:
             self.permission_classes = [TokenHasScope, permissions.IsAdminUser]
             self.required_scopes = ['write', 'staff']
+        if self.action == "destroy":
+            self.permission_classes = [TokenHasScope, permissions.IsAdminUser]
+            self.required_scopes = ['write', 'admin']
         return super(self.__class__, self).get_permissions()
 
     def perform_create(self, serializer):
@@ -58,12 +61,16 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
         except Cohort.DoesNotExist:
             return JSONResponse(None, status=status.HTTP_204_NO_CONTENT)
 
-    @decorators.detail_route(methods=['post'], required_scopes=['write admin'])
+    @decorators.detail_route(methods=['post'], required_scopes=['write staff'])
     def cohort_create(self, request, **kwargs):
         programme = Programme.objects.get(programmeId=kwargs['programmeId'])
         if not programme:
             return JSONResponse({'detail': 'Programme not found'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = CohortSerializer(data=request.data)
+        # Add defaultCohortSize if no cohortSize present
+        input_data = request.data
+        if not "cohortSize" in input_data:
+            input_data["cohortSize"] = programme.defaultCohortSize
+        serializer = CohortSerializer(data=input_data)
         if not serializer.is_valid():
             return JSONResponse({'detail': 'Your request data is invalid.', 'errors':serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         if not "createdBy" in serializer.validated_data:

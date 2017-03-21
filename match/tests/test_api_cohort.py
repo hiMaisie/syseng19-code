@@ -93,6 +93,20 @@ class CohortAPITests(TestCaseUtils, APITestCase):
         c = Cohort.objects.get(cohortId=json.loads(response.content.decode('utf-8'))['cohortId'])
         self.assertEqual(c.createdBy, self.staff_user)
 
+    def test_can_create_cohort_with_defaultCohortSize(self):
+        url = reverse("programme-cohort-list", kwargs={"programmeId": self.programme.programmeId})
+        data = {
+            'closeDate': '2017-07-27 12:00:00',
+            'matchDate': '2017-08-03 12:00:00'
+        }
+        token = self._create_token(self.staff_user, 'write staff')
+        response = self.client.post(url, data, format="json", HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        if not response.status_code == status.HTTP_201_CREATED:
+            print(response.data)
+            self.fail()
+        c = Cohort.objects.get(cohortId=json.loads(response.content.decode('utf-8'))['cohortId'])
+        self.assertEqual(c.cohortSize, self.programme.defaultCohortSize)
+
     ## HELPER FUNCTIONS
 
     def _get_auth_header(self, token=None):
