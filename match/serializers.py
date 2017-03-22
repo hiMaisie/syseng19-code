@@ -31,12 +31,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(required=False)
+    isStaff = serializers.ReadOnlyField(source='is_staff')
 
     class Meta:
         model = get_user_model()
-        fields = ('email', 'first_name', 'last_name', 'profile', 'password', 'id')
+        fields = ('email', 'first_name', 'last_name', 'isStaff', 'profile', 'password', 'id')
         extra_kwargs = {
-            'password': { 'write_only': True }
+            'password': { 'write_only': True },
+            'isStaff': { 'read_only': True }
         }
 
     def create(self, validated_data):

@@ -54,3 +54,17 @@ class UserSerializerTests(TestCase):
         self.assertTrue(user)
         self.assertTrue(user.password)
         self.assertNotEqual(user.password, 'hunter2')
+
+    def test_user_serializer_has_correct_staff_val(self):
+        user = User.objects.create_user(
+                username="testuser",
+                password="hunter2",
+                is_staff=True
+        )
+        serializer = UserSerializer(user)
+        self.assertTrue(serializer.data['isStaff'])
+
+        user.is_staff = False
+        user.save()
+        serializer = UserSerializer(user)
+        self.assertFalse(serializer.data['isStaff'])
