@@ -94,6 +94,9 @@ class Participant(models.Model):
     isMatched = models.BooleanField(default=False)
     tags = models.ManyToManyField(Tag, related_name="ParticipantTag")
 
+    class Meta:
+        unique_together  = (("user", "cohort",),)
+
 class MentorshipScore(models.Model):
     mentorshipScoreId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     mentor = models.ForeignKey(Participant, related_name="+")

@@ -1,3 +1,4 @@
+from django.db.utils import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 from match.models import Cohort,Participant,Programme,Tag
@@ -97,3 +98,15 @@ class ParticipantSerializerTests(TestCase):
         data = {}
         serializer = ParticipantSerializer(data=data)
         self.assertFalse(serializer.is_valid())
+
+    def test_serializer_cant_apply_for_same_cohort_twice(self):
+        data = { 'isMentor': True }
+        serializer = ParticipantSerializer(data=data)
+        serializer.is_valid()
+        participant = serializer.save(user=self.user, cohort=self.cohort)
+
+        data = { 'isMentor': False }
+        serializer = ParticipantSerializer(data=data)
+        serializer.is_valid()
+        with self.assertRaises(IntegrityError):
+            participant = serializer.save(user=self.user, cohort=self.cohort)
