@@ -1,4 +1,4 @@
-from rest_framework import serializers
+from rest_framework import serializers,validators
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, User
 import json
@@ -9,6 +9,9 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Tag
         fields = ('name',)
+        extra_kwargs = {
+            'name': { 'validators': [] }
+        }
 
 class UserProfileSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, required=False)
@@ -41,11 +44,24 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         userprofile_data = validated_data.pop('profile', {})
+
+        tags_data = []
+        if 'tags' in validated_data:
+            tags_data = validated_data.pop('tags')
+
         password = validated_data.pop('password', None)
         validated_data['username'] = validated_data['email']
         user = User.objects.create(**validated_data)
         if password:
             user.set_password(password)
+
+        for tag in tags_data:
+            try:
+                obj = models.Tag.objects.get(name=tag['name'])
+                user.tags.add(obj)
+            except models.Tag.DoesNotExist:
+                user.tags.create(**tag)
+
         user.save()
         return user
 
@@ -111,7 +127,8 @@ class ParticipantSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {
             'signUpDate': { 'read_only': True },
-            'isMatched': { 'read_only': True }
+            'isMatched': { 'read_only': True },
+            'isMentor': { 'required': True }
         }
 
     def create(self, validated_data):
@@ -121,9 +138,9 @@ class ParticipantSerializer(serializers.ModelSerializer):
         participant = models.Participant.objects.create(**validated_data)
         for tag in tags_data:
             try:
-                obj = Tag.objects.get(name=tag.name)
+                obj = models.Tag.objects.get(name=tag['name'])
                 participant.tags.add(obj)
-            except Tag.DoesNotExist:
+            except models.Tag.DoesNotExist:
                 participant.tags.create(**tag)
         return participant
 

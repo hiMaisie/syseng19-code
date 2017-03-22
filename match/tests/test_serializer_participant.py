@@ -55,10 +55,9 @@ class ParticipantSerializerTests(TestCase):
         Tag.objects.create(name="sports")
         serializer = ParticipantSerializer(data=data)
         if not serializer.is_valid():
-            print(serializer.errors)
-            self.fail()
+            self.fail(serializer.errors)
         participant = serializer.save(user=self.user, cohort=self.cohort)
-        self.assertTrue(len(participant.tags), 2)
+        self.assertTrue(len(participant.tags.all()), 2)
 
     def test_serializer_include_nonexisting_tags(self):
         data = {
@@ -73,10 +72,9 @@ class ParticipantSerializerTests(TestCase):
         Tag.objects.create(name="sports")
         serializer = ParticipantSerializer(data=data)
         if not serializer.is_valid():
-            print(serializer.errors)
-            self.fail()
+            self.fail(serializer.errors)
         participant = serializer.save(user=self.user, cohort=self.cohort)
-        self.assertTrue(len(participant.tags), 3)
+        self.assertTrue(len(participant.tags.all()), 3)
 
     def test_serializer_ignore_duplicate_tags(self):
         data = {
@@ -91,10 +89,9 @@ class ParticipantSerializerTests(TestCase):
         Tag.objects.create(name="sports")
         serializer = ParticipantSerializer(data=data)
         if not serializer.is_valid():
-            print(serializer.errors)
-            self.fail()
+            self.fail(serializer.errors)
         participant = serializer.save(user=self.user, cohort=self.cohort)
-        self.assertTrue(len(participant.tags), 2)
+        self.assertTrue(len(participant.tags.all()), 2)
 
     def test_serializer_is_mentor_not_set(self):
         data = {}
