@@ -227,6 +227,27 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
         response = self.client.delete(url, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_can_patch_programme_if_admin(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        patch_data = {
+            'name':'Renamed Programme',
+            'description': 'This is some random description'
+        }
+        url = reverse('programme-detail', kwargs={'programmeId': programme.programmeId})
+        token = self._create_token(self.staff_user, 'write staff')
+        response = self.client.patch(url, patch_data, HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # refresh programme var
+        programme = Programme.objects.get(programmeId=programme.programmeId)
+        self.assertEqual(programme.name, patch_data['name'])
+        self.assertEqual(programme.description, patch_data['description'])
+
     ## HELPER FUNCTIONS
 
     def _get_auth_header(self, token=None):
