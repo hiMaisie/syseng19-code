@@ -132,6 +132,8 @@ class ParticipantSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
+        if validated_data['cohort'].participants.count() >= validated_data['cohort'].cohortSize:
+            raise serializers.ValidationError("This cohort is full.")
         tags_data = []
         if 'tags' in validated_data:
             tags_data = validated_data.pop('tags')
