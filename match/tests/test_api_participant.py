@@ -3,7 +3,7 @@ import json
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
-from match.models import Cohort,Participant,Programme
+from match.models import Cohort,Participant,Programme,Tag
 from match.serializers import ParticipantSerializer
 from oauth2_provider.compat import urlencode
 from oauth2_provider.models import AccessToken, Application
@@ -47,6 +47,55 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         token = self._create_token(self.test_user, 'read write')
         response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_can_register_for_cohort_with_new_tags(self):
+        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
+        data = {
+            'isMentor': True,
+            'tags': [
+                'node.js',
+                'running'
+            ]
+        }
+        token = self._create_token(self.test_user, 'read write')
+        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(len(res_data['tags']), 2)
+
+    def test_can_register_for_cohort_with_existing_tags(self):
+        Tag.objects.create(name="node.js")
+        Tag.objects.create(name="running")
+        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
+        data = {
+            'isMentor': True,
+            'tags': [
+                'node.js',
+                'running'
+            ]
+        }
+        token = self._create_token(self.test_user, 'read write')
+        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(len(res_data['tags']), 2)
+
+    def test_can_register_for_cohort_with_duplicate_tags(self):
+        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
+        data = {
+            'isMentor': True,
+            'tags': [
+                'node.js',
+                'Node.js',
+                'running'
+            ]
+        }
+        token = self._create_token(self.test_user, 'read write')
+        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = json.loads(response.content.decode('utf-8'))
+        # Should be case insensitive.
+        self.assertEqual(len(res_data['tags']), 2)
 
     def test_cant_register_for_cohort_without_scope(self):
         url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})

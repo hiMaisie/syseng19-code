@@ -1,9 +1,27 @@
 from rest_framework import serializers,validators
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, User
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
+from django.utils.encoding import smart_text
 import json
 from . import models
+
+# A modification of SlugRelatedField that allows the object
+# to be created if it does not exist.
+# http://stackoverflow.com/questions/28009829/creating-and-saving-foreign-key-objects-using-a-slugrelatedfield
+class CreatableSlugRelatedField(serializers.SlugRelatedField):
+
+    def to_internal_value(self, data):
+        try:
+            # .lower() so that we only *FIND* with case insensitive
+            return self.get_queryset().get(**{self.slug_field: data.lower()})
+        except self.get_queryset().model.DoesNotExist:
+            return self.get_queryset().create(**{self.slug_field: data})
+        except ObjectDoesNotExist:
+            self.fail('does_not_exist', slug_name=self.slug_field, value=smart_text(data))
+        except (TypeError, ValueError):
+            self.fail('invalid')
 
 class TagSerializer(serializers.ModelSerializer):
 
@@ -16,10 +34,6 @@ class TagSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, required=False)
-    # profileImageUrl = serializers.SerializerMethodField()
-    # firstName = serializers.CharField(source='user.first_name')
-    # lastName = serializers.CharField(source='user.last_name')
-    # email = serializers.EmailField(source='user.email')
 
     class Meta:
         model = models.UserProfile
@@ -113,7 +127,12 @@ class CohortSerializer(serializers.ModelSerializer):
         )
 
 class ParticipantSerializer(serializers.ModelSerializer):
-    tags = TagSerializer(many=True, required=False)
+    # tags = TagSerializer(many=True, required=False)
+    tags = CreatableSlugRelatedField(many=True,
+            slug_field="name", 
+            queryset=models.Tag.objects.all(),
+            required=False
+    )
     user = UserSerializer(required=False, read_only=True)
     cohort = CohortSerializer(required=False, read_only=True)
 
@@ -145,17 +164,7 @@ class ParticipantSerializer(serializers.ModelSerializer):
         if timezone.now() < validated_data['cohort'].openDate:
             raise serializers.ValidationError("This cohort is not yet open for registration.")
 
-        tags_data = []
-        if 'tags' in validated_data:
-            tags_data = validated_data.pop('tags')
-        participant = models.Participant.objects.create(**validated_data)
-        for tag in tags_data:
-            try:
-                obj = models.Tag.objects.get(name=tag['name'])
-                participant.tags.add(obj)
-            except models.Tag.DoesNotExist:
-                participant.tags.create(**tag)
-        return participant
+        return models.Participant.objects.create(**validated_data)
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:

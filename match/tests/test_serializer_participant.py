@@ -67,8 +67,8 @@ class ParticipantSerializerTests(TestCase):
         data = {
             'isMentor': True,
             'tags': [
-                {'name': 'node.js'},
-                {'name': 'sports'}
+                'node.js',
+                'sports'
             ]
         }
         Tag.objects.create(name="node.js")
@@ -77,15 +77,15 @@ class ParticipantSerializerTests(TestCase):
         if not serializer.is_valid():
             self.fail(serializer.errors)
         participant = serializer.save(user=self.user, cohort=self.cohort)
-        self.assertTrue(len(participant.tags.all()), 2)
+        self.assertEqual(len(participant.tags.all()), 2)
 
     def test_serializer_include_nonexisting_tags(self):
         data = {
             'isMentor': True,
             'tags': [
-                {'name': 'node.js'},
-                {'name': 'sports'},
-                {'name': 'something'}
+                'node.js',
+                'sports',
+                'something'
             ]
         }
         Tag.objects.create(name="node.js")
@@ -94,15 +94,15 @@ class ParticipantSerializerTests(TestCase):
         if not serializer.is_valid():
             self.fail(serializer.errors)
         participant = serializer.save(user=self.user, cohort=self.cohort)
-        self.assertTrue(len(participant.tags.all()), 3)
+        self.assertEqual(len(participant.tags.all()), 3)
 
     def test_serializer_ignore_duplicate_tags(self):
         data = {
             'isMentor': True,
             'tags': [
-                {'name': 'node.js'},
-                {'name': 'sports'},
-                {'name': 'sports'}
+                'node.js',
+                'sports',
+                'sports'
             ]
         }
         Tag.objects.create(name="node.js")
@@ -111,7 +111,7 @@ class ParticipantSerializerTests(TestCase):
         if not serializer.is_valid():
             self.fail(serializer.errors)
         participant = serializer.save(user=self.user, cohort=self.cohort)
-        self.assertTrue(len(participant.tags.all()), 2)
+        self.assertEqual(len(participant.tags.all()), 2)
 
     def test_serializer_is_mentor_not_set(self):
         data = {}
