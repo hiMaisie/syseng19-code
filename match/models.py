@@ -90,8 +90,12 @@ class Participant(models.Model):
     user = models.ForeignKey(User, related_name="mentorships")
     cohort = models.ForeignKey(Cohort, related_name="participants")
     signUpDate = models.DateTimeField(default=timezone.now)
-    isMentor = models.BooleanField(default=False)
+    isMentor = models.BooleanField(null=False)
     isMatched = models.BooleanField(default=False)
+    tags = models.ManyToManyField(Tag, related_name="ParticipantTag")
+
+    class Meta:
+        unique_together  = (("user", "cohort",),)
 
 class MentorshipScore(models.Model):
     mentorshipScoreId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
