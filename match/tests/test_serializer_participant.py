@@ -113,6 +113,24 @@ class ParticipantSerializerTests(TestCase):
         participant = serializer.save(user=self.user, cohort=self.cohort)
         self.assertEqual(len(participant.tags.all()), 2)
 
+    def test_serializer_ignore_same_tag_slug(self):
+        data = {
+            'isMentor': True,
+            'tags': [
+                'node.js',
+                'Node JS',
+                'sports',
+                'Sports'
+            ]
+        }
+        Tag.objects.create(name="node.js")
+        Tag.objects.create(name="sports")
+        serializer = ParticipantSerializer(data=data)
+        if not serializer.is_valid():
+            self.fail(serializer.errors)
+        participant = serializer.save(user=self.user, cohort=self.cohort)
+        self.assertEqual(len(participant.tags.all()), 2)
+
     def test_serializer_is_mentor_not_set(self):
         data = {}
         serializer = ParticipantSerializer(data=data)

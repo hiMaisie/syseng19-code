@@ -5,6 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.utils.encoding import smart_text
 import json
+from slugify import slugify
 from . import models
 
 # A modification of SlugRelatedField that allows the object
@@ -12,10 +13,14 @@ from . import models
 # http://stackoverflow.com/questions/28009829/creating-and-saving-foreign-key-objects-using-a-slugrelatedfield
 class CreatableSlugRelatedField(serializers.SlugRelatedField):
 
+    def __init__(self, **kwargs):
+        self.filter_field = kwargs.pop('filter_field')
+        super(CreatableSlugRelatedField, self).__init__(**kwargs)
+
     def to_internal_value(self, data):
         try:
             # .lower() so that we only *FIND* with case insensitive
-            return self.get_queryset().get(**{self.slug_field: data.lower()})
+            return self.get_queryset().get(**{self.filter_field: slugify(data)})
         except self.get_queryset().model.DoesNotExist:
             return self.get_queryset().create(**{self.slug_field: data})
         except ObjectDoesNotExist:
@@ -132,6 +137,7 @@ class ParticipantSerializer(serializers.ModelSerializer):
     # tags = TagSerializer(many=True, required=False)
     tags = CreatableSlugRelatedField(many=True,
             slug_field="name", 
+            filter_field="slug",
             queryset=models.Tag.objects.all(),
             required=False
     )
