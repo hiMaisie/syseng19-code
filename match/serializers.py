@@ -1,6 +1,7 @@
 from rest_framework import serializers,validators
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, User
+from django.utils import timezone
 import json
 from . import models
 
@@ -134,8 +135,16 @@ class ParticipantSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
+        # prevent too many signups
         if validated_data['cohort'].participants.count() >= validated_data['cohort'].cohortSize:
             raise serializers.ValidationError("This cohort is full.")
+
+        # prevent signups before opening date and after closing date
+        if timezone.now() > validated_data['cohort'].closeDate:
+            raise serializers.ValidationError("This cohort has closed for registration.")
+        if timezone.now() < validated_data['cohort'].openDate:
+            raise serializers.ValidationError("This cohort is not yet open for registration.")
+
         tags_data = []
         if 'tags' in validated_data:
             tags_data = validated_data.pop('tags')
