@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from django.utils import timezone
 from match.validators import user_validators
 import os
+from slugify import slugify
 import uuid
 
 
@@ -25,9 +26,21 @@ def _get_default_match_date():
 
 class Tag(models.Model):
     name = models.CharField(max_length=30, primary_key=True)
+    slug = models.CharField(max_length=30, default="")
 
     def __str__(self):
         return self.name
+
+    def _get_slug(self):
+        return slugify(self.name)
+    
+    def save(self, *args, **kwargs):
+        self.slug = self._get_slug()
+        super(Tag, self).save(*args, **kwargs)
+    
+    def update(self, *args, **kwargs):
+        self.slug = self._get_slug()
+        super(Tag, self).update(*args, **kwargs)
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, related_name="profile")
