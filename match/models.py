@@ -86,6 +86,25 @@ class Programme(models.Model):
     class Meta:
         ordering = ('name',)
 
+    @property
+    def activeCohort(self):
+        qs = self.cohorts.filter(
+            openDate__lte=timezone.now(),
+            closeDate__gt=timezone.now()
+        ).order_by('openDate')
+
+        # select if not empty
+        cohorts = [c for c in qs if c.participantCount < c.cohortSize]
+
+        if len(cohorts):
+            return cohorts[0]
+        
+        # If all full, pick earliest.
+        cohorts = qs.all()
+        if len(cohorts):
+            return cohorts[0]
+        return None
+
 class Cohort(models.Model):
     cohortId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     programme = models.ForeignKey(Programme, on_delete=models.CASCADE, related_name="cohorts")
@@ -97,6 +116,10 @@ class Cohort(models.Model):
 
     def __str__(self):
         return "%s - %s" % (self.programme.name, self.openDate)
+
+    @property
+    def participantCount(self):
+        return self.participants.count()
 
 class Participant(models.Model):
     participantId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
