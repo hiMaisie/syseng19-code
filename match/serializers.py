@@ -118,7 +118,6 @@ class ProgrammeSerializer(serializers.ModelSerializer):
 class CohortSerializer(serializers.ModelSerializer):
     createdBy = UserSerializer(required=False, read_only=True)
     programme = ProgrammeSerializer(required=False, read_only=True)
-    participantCount = serializers.IntegerField(source='participants.count', read_only=True)
 
     class Meta:
         model = models.Cohort
@@ -134,7 +133,6 @@ class CohortSerializer(serializers.ModelSerializer):
         )
 
 class ParticipantSerializer(serializers.ModelSerializer):
-    # tags = TagSerializer(many=True, required=False)
     tags = CreatableSlugRelatedField(many=True,
             slug_field="name", 
             filter_field="slug",
