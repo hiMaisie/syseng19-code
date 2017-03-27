@@ -3,7 +3,7 @@ import json
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
-from match.models import Programme
+from match.models import Cohort,Programme
 from match.serializers import ProgrammeSerializer
 from oauth2_provider.compat import urlencode
 from oauth2_provider.models import AccessToken, Application
@@ -247,6 +247,43 @@ class ProgrammeAPITests(TestCaseUtils, APITestCase):
         programme = Programme.objects.get(programmeId=programme.programmeId)
         self.assertEqual(programme.name, patch_data['name'])
         self.assertEqual(programme.description, patch_data['description'])
+
+    def test_active_cohort_endpoint_200_when_activecohort_exists(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        cohort = programme.cohorts.create(
+            openDate = timezone.now() - timedelta(days=3),
+            closeDate = timezone.now() + timedelta(days=4),
+            createdBy = self.staff_user
+        )
+        cohort = programme.cohorts.create(
+            openDate = timezone.now() - timedelta(days=8),
+            closeDate = timezone.now() - timedelta(days=1),
+            createdBy = self.staff_user
+        )
+        url = reverse('programme-active-cohort', kwargs={'programmeId': programme.programmeId})
+        token = self._create_token(self.staff_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        cid = json.loads(response.content.decode('utf-8'))['cohortId']
+        self.assertEqual(cid, str(programme.activeCohort.cohortId))
+
+    def test_active_cohort_endpoint_404_when_no_activecohort(self):
+        programme = Programme.objects.create(
+            name = 'Test Programme',
+            description = 'This is a test programme.',
+            defaultCohortSize = 100,
+            createdBy = self.staff_user
+        )
+        url = reverse('programme-active-cohort', kwargs={'programmeId': programme.programmeId})
+        token = self._create_token(self.staff_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     ## HELPER FUNCTIONS
 

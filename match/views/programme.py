@@ -61,6 +61,19 @@ class ProgrammeViewSet(viewsets.ModelViewSet):
         except Cohort.DoesNotExist:
             return JSONResponse(None, status=status.HTTP_204_NO_CONTENT)
 
+    @decorators.detail_route(methods=['get'], required_scopes=['read'])
+    def cohort_active(self, request, **kwargs):
+        programme = Programme.objects.get(programmeId=kwargs['programmeId'])
+        if not programme:
+            return JSONResponse({'detail': 'Programme not found'}, status=status.HTTP_404_NOT_FOUND)
+        cohort = programme.activeCohort
+        if cohort:
+            serializer = CohortSerializer(cohort)
+            return JSONResponse(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return JSONResponse({}, status=status.HTTP_404_NOT_FOUND)
+
+
     @decorators.detail_route(methods=['post'], required_scopes=['write staff'])
     def cohort_create(self, request, **kwargs):
         programme = Programme.objects.get(programmeId=kwargs['programmeId'])
@@ -90,6 +103,10 @@ programme_detail = ProgrammeViewSet.as_view({
     'delete': 'destroy'
 })
 
+programme_active_cohort = ProgrammeViewSet.as_view({
+    'get': 'cohort_active',
+})
+
 programme_cohort = ProgrammeViewSet.as_view({
     'post': 'cohort_create',
     'get': 'cohort_list',
@@ -97,6 +114,7 @@ programme_cohort = ProgrammeViewSet.as_view({
 
 urlpatterns = [
     url(r'^$', programme_list, name='programme-list'),
-    url(r'^(?P<programmeId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/cohorts', programme_cohort, name='programme-cohort-list'),
-    url(r'^(?P<programmeId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})', programme_detail, name='programme-detail'),
+    url(r'^(?P<programmeId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/$', programme_detail, name='programme-detail'),
+    url(r'^(?P<programmeId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/cohorts/$', programme_cohort, name='programme-cohort-list'),
+    url(r'^(?P<programmeId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/cohorts/active$', programme_active_cohort, name='programme-active-cohort'),
 ]
