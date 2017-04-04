@@ -138,10 +138,18 @@ class Participant(models.Model):
     signUpDate = models.DateTimeField(default=timezone.now)
     isMentor = models.BooleanField(null=False)
     isMatched = models.BooleanField(default=False)
+    isTopThreeSelected = models.BooleanField(default=False)
     tags = models.ManyToManyField(Tag, related_name="ParticipantTag")
 
     class Meta:
         unique_together  = (("user", "cohort",),)
+
+    def getTopThree(self):
+        if not (self.isMentor or self.isTopThreeSelected):
+            topThree = MentorshipScore.objects.filter(mentee=self).order_by("-score")[:3]
+            return list(map(lambda p: p.mentor, topThree))
+        else:
+            return []
 
 class MentorshipScore(models.Model):
     mentorshipScoreId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)

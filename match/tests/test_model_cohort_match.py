@@ -115,5 +115,6 @@ class CohortModelMatchTets(TestCase):
         ms1 = MentorshipScore.objects.filter(mentee=p1).first()
         ms2 = MentorshipScore.objects.filter(mentee=p2).first()
         self.assertTrue(ms1.score, 2)
+        print(p2.getTopThree())
         self.assertTrue(ms1.score, 0)
 
