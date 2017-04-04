@@ -122,7 +122,14 @@ class Cohort(models.Model):
         return self.participants.count()
 
     def match(self):
-        return None
+        mentors = self.participants.filter(isMentor=True)
+        for mentee in self.participants.filter(isMentor=False):
+            for mentor in mentors:
+                p = MentorshipScore.objects.create(
+                        mentor=mentor,
+                        mentee=mentee
+                )
+                p.calculateScore()
 
 class Participant(models.Model):
     participantId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
@@ -141,6 +148,12 @@ class MentorshipScore(models.Model):
     mentor = models.ForeignKey(Participant, related_name="+")
     mentee = models.ForeignKey(Participant, related_name="scores")
     score = models.IntegerField(default=0)
+
+    def calculateScore(self):
+        mentee_tags = list(self.mentee.tags.all())
+        mentor_tags = list(self.mentor.tags.all())
+        self.score = len(set(mentee_tags).intersection(mentor_tags))
+        self.save()
 
 class Mentorship(models.Model):
     mentor = models.ForeignKey(Participant, related_name="mentor_mentorships")

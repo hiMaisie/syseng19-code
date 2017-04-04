@@ -89,31 +89,31 @@ class CohortModelMatchTets(TestCase):
         ms = MentorshipScore.objects.first()
 
     def test_match_two_scores_for_two_mentees_one_mentor(self):
-        self.cohort.participants.create(
+        p1 = self.cohort.participants.create(
             user=self.user1,
             isMentor=False,
             tags = [
                 self.tags['nodejs'],
-                self.tags['sport'],
+                self.tags['sports'],
             ]           
         )
-        self.cohort.participants.create(
+        p2 = self.cohort.participants.create(
             user=self.user2,
             isMentor=False,
         )
-        self.cohort.participants.create(
+        p3 = self.cohort.participants.create(
             user=self.user3,
             isMentor=True,
             tags = [
                 self.tags['nodejs'],
-                self.tags['sport'],
+                self.tags['sports'],
             ]           
         )
         self.cohort.match()
         self.assertEqual(MentorshipScore.objects.all().count(), 2)
         # check scores are correctly set
-        ms1 = MentorshipScore.objects.filter(mentee=self.user1).first()
-        ms2 = MentorshipScore.objects.filter(mentee=self.user2).first()
+        ms1 = MentorshipScore.objects.filter(mentee=p1).first()
+        ms2 = MentorshipScore.objects.filter(mentee=p2).first()
         self.assertTrue(ms1.score, 2)
         self.assertTrue(ms1.score, 0)
 
