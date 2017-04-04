@@ -121,6 +121,9 @@ class Cohort(models.Model):
     def participantCount(self):
         return self.participants.count()
 
+    def match(self):
+        return None
+
 class Participant(models.Model):
     participantId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(User, related_name="mentorships")
