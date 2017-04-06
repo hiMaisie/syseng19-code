@@ -167,6 +167,12 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_cant_get_participant_endpoint_without_registering(self):
+        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
+        token = self._create_token(self.user, 'read write')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     ## HELPER FUNCTIONS
 
     def _get_auth_header(self, token=None):
