@@ -169,9 +169,19 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
 
     def test_cant_get_participant_endpoint_without_registering(self):
         url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
-        token = self._create_token(self.user, 'read write')
+        token = self._create_token(self.test_user, 'read write')
         response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_can_get_participant_endpoint_after_registration(self):
+        self.cohort.participants.create(
+            isMentor=True,
+            user=self.test_user
+        )
+        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
+        token = self._create_token(self.test_user, 'read write')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     ## HELPER FUNCTIONS
 

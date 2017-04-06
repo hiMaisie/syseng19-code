@@ -1,5 +1,5 @@
 from .JSONResponse import JSONResponse
-from match.models import Cohort
+from match.models import Cohort,Participant
 from match.serializers import CohortSerializer,ParticipantSerializer,UserSerializer
 
 from django.conf.urls import include,url
@@ -55,6 +55,16 @@ class CohortViewSet(viewsets.ModelViewSet):
         except ValidationError as e:
             return JSONResponse({'detail': e.args[0]}, status=status.HTTP_403_FORBIDDEN)
         return JSONResponse(s.data, status=status.HTTP_200_OK)
+    
+    @decorators.detail_route(methods=['get'], required_scopes=['read'])
+    def get_registration(self, request, **kwargs):
+        c = Cohort.objects.get(cohortId=self.kwargs['cohortId'])
+        try:
+            participant = Participant.objects.get(cohort=c, user=self.request.user)
+        except Participant.DoesNotExist:
+            return JSONResponse({'detail': 'User not signed up for this cohort'}, status=status.HTTP_404_NOT_FOUND)
+        s = ParticipantSerializer(participant)
+        return JSONResponse(s.data)
 
 cohort_list = CohortViewSet.as_view({
     'get': 'list'
@@ -67,6 +77,7 @@ cohort_detail = CohortViewSet.as_view({
 })
 
 cohort_register = CohortViewSet.as_view({
+    'get': 'get_registration',
     'post': 'register'
 })
 
