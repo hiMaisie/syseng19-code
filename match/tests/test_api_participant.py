@@ -19,6 +19,7 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         self.test_user = User.objects.create_user("test@example.com", "test@example.com", "hunter23")
         self.other_user = User.objects.create_user("test2@example.com", "test2@example.com", "hunter23")
         self.staff_user = User.objects.create_user("staff@example.com", "staff@example.com", "hunter23", is_staff=True)
+        self.fourth_user = User.objects.create_user("test3@example.com", "test3@example.com", "hunter23")
 
         self.application = Application(
             name = "Django Test",
@@ -38,6 +39,12 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
             cohortSize=2,
             createdBy=self.staff_user
         )
+
+        self.tags = {
+            'nodejs': Tag.objects.create(name="One True Dev Language"),
+            'sports': Tag.objects.create(name="Sport Stuff"),
+            'django': Tag.objects.create(name="Django Rest Framework"),
+        }
 
     def test_can_register_for_cohort(self):
         url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
@@ -183,6 +190,235 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_can_get_list_of_users_participants(self):
+        p = self.cohort.participants.create(
+            isMentor=True,
+            user=self.test_user
+        )
+        self.cohort.participants.create(
+            isMentor=False,
+            user=self.other_user
+        )
+        url = reverse('participant-list')
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(len(res_data), 1)
+        self.assertEqual(res_data[0]['participantId'], p.participantId)
+
+    def test_get_empty_list_of_participants_if_no_participants(self):
+        self.cohort.participants.create(
+            isMentor=False,
+            user=self.other_user
+        )
+        url = reverse('participant-list')
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(len(res_data), 0)
+
+    def test_can_get_participant_detail(self):
+        p = self.cohort.participants.create(
+            isMentor=True,
+            user=self.test_user
+        )
+        url = reverse('participant-detail', kwargs={'participantId': p.participantId})
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(res_data[0]['participantId'], p.participantId)
+
+    def test_can_get_top_three_if_cohort_closed(self):
+        cohort = self.programme.cohorts.create(
+            openDate=timezone.now() - timedelta(days=8),
+            closeDate=timezone.now() - timedelta(days=1),
+            matchDate=timezone.now() + timedelta(days=3),
+            createdBy=self.test_user
+        )
+        p = cohort.participants.create(
+            isMentor=False,
+            user=self.test_user,
+            tags=[
+                self.tags['django'],
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        mentor1 = cohort.participants.create(
+            isMentor=True,
+            user=self.other_user,
+            tags=[
+                self.tags['django'],
+            ]
+        )
+        mentor2 = cohort.participants.create(
+            isMentor=True,
+            user=self.staff_user,
+            tags=[
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        mentor3 = cohort.participants.create(
+            isMentor=True,
+            user=self.staff_user,
+            tags=[
+                self.tags['django'],
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        cohort.match()
+        url = reverse('participant-top-three', kwargs={'participantId': p.participantId})
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(len(res_data), 3)
+        self.assertEqual(res_data[0]['participantId'], mentor3.participantId)
+        self.assertEqual(res_data[1]['participantId'], mentor2.participantId)
+        self.assertEqual(res_data[2]['participantId'], mentor1.participantId)
+
+    def test_cant_get_top_three_if_cohort_not_closed(self):
+        cohort = self.programme.cohorts.create(
+            openDate=timezone.now() - timedelta(days=3),
+            closeDate=timezone.now() + timedelta(days=3),
+            matchDate=timezone.now() + timedelta(days=10),
+            createdBy=self.test_user
+        )
+        p = cohort.participants.create(
+            isMentor=False,
+            user=self.test_user,
+            tags=[
+                self.tags['django'],
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        mentor1 = cohort.participants.create(
+            isMentor=True,
+            user=self.other_user,
+            tags=[
+                self.tags['django'],
+            ]
+        )
+        url = reverse('participant-top-three', kwargs={'participantId': p.participantId})
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_cant_get_top_three_if_matching_finished(self):
+        cohort = self.programme.cohorts.create(
+            openDate=timezone.now() - timedelta(days=8),
+            closeDate=timezone.now() - timedelta(days=3),
+            matchDate=timezone.now() - timedelta(days=1),
+            createdBy=self.test_user
+        )
+        p = cohort.participants.create(
+            isMentor=False,
+            user=self.test_user,
+            tags=[
+                self.tags['django'],
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        mentor1 = cohort.participants.create(
+            isMentor=True,
+            user=self.other_user,
+            tags=[
+                self.tags['django'],
+            ]
+        )
+        mentor2 = cohort.participants.create(
+            isMentor=True,
+            user=self.staff_user,
+            tags=[
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        mentor3 = cohort.participants.create(
+            isMentor=True,
+            user=self.staff_user,
+            tags=[
+                self.tags['django'],
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        cohort.match()
+        url = reverse('participant-top-three', kwargs={'participantId': p.participantId})
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_can_get_top_three_even_if_not_top_three(self):
+        cohort = self.programme.cohorts.create(
+            openDate=timezone.now() - timedelta(days=8),
+            closeDate=timezone.now() - timedelta(days=1),
+            matchDate=timezone.now() + timedelta(days=6),
+            createdBy=self.test_user
+        )
+        p = cohort.participants.create(
+            isMentor=False,
+            user=self.test_user,
+            tags=[
+                self.tags['django'],
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        mentor1 = cohort.participants.create(
+            isMentor=True,
+            user=self.other_user,
+            tags=[
+                self.tags['django'],
+            ]
+        )
+        mentor2 = cohort.participants.create(
+            isMentor=True,
+            user=self.staff_user,
+            tags=[
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        cohort.match()
+        url = reverse('participant-top-three', kwargs={'participantId': p.participantId})
+        token = self._create_token(self.test_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        res_data = json.loads(response.content.decode('utf-8'))
+        self.assertEqual(len(res_data), 2)
+
+    def test_cant_get_top_three_if_mentor(self):
+        objs = self._create_nominal_cohort_and_participants()
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentor'][0].participantId})
+        token = self._create_token(self.other_user, 'read')
+        response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_can_choose_top_three_if_mentee(self):
+        obj = self._create_nominal_cohort_and_participants()
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'][0].participantId})
+        token = self._create_token(self.test_user, 'write')
+        data = [
+            objs['mentor'][2].participantId,
+            objs['mentor'][1].participantId,
+            objs['mentor'][0].participantId,
+        ]
+        response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    #TODO: Add test for can't choose top three twice
+    #TODO: Add test for can't choose top three before closeDate
+    #TODO: Add test for can't choose top three after matchDate
+    #TODO: Add test for can't choose top three if auth user isn't participant
+    #TODO: Add test for pass when <3 choices given.
+
     ## HELPER FUNCTIONS
 
     def _get_auth_header(self, token=None):
@@ -196,3 +432,54 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
             expires=timezone.now() + timedelta(days=1),
             scope=scope
         )
+
+    def _create_nominal_cohort_and_participants(self):
+        cohort = self.programme.cohorts.create(
+            openDate=timezone.now() - timedelta(days=8),
+            closeDate=timezone.now() - timedelta(days=1),
+            matchDate=timezone.now() + timedelta(days=3),
+            createdBy=self.test_user
+        )
+        p = cohort.participants.create(
+            isMentor=False,
+            user=self.test_user,
+            tags=[
+                self.tags['django'],
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        mentor1 = cohort.participants.create(
+            isMentor=True,
+            user=self.other_user,
+            tags=[
+                self.tags['django'],
+            ]
+        )
+        mentor2 = cohort.participants.create(
+            isMentor=True,
+            user=self.staff_user,
+            tags=[
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        mentor3 = cohort.participants.create(
+            isMentor=True,
+            user=self.staff_user,
+            tags=[
+                self.tags['django'],
+                self.tags['nodejs'],
+                self.tags['sports'],
+            ]
+        )
+        cohort.match()
+        return {
+            'cohort': cohort,
+            'mentee': p,
+            'mentors': [
+                mentor1,
+                mentor2,
+                mentor3,
+            ]
+        }
