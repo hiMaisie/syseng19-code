@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  version: "0.1.0"
+  version: "0.2.0"
   title: ATOS Mentor Match
   description: API documentation for the ATOS Mentor Match project.
 schemes:
@@ -29,7 +29,7 @@ securityDefinitions:
     type: oauth2
     # This should be updated to the Token URL of your OAuth provider.
     tokenUrl: http://api.dev.mbell.me/auth/token/
-    authorizationUrl: http://api.dev.mbell.me/auth/token/
+    authorizationUrl: http://api.dev.mbell.me/auth/authorize/
     flow: accessCode
     scopes:
       read: Read your user details and associated mentorships
@@ -45,11 +45,55 @@ security:
   - password:
     - read
     - write
+  - authcode:
+    - read
+    - write
+responses:
+  ok:
+    description: "successful operation"
+  notAuthenticated:
+    description: "You did not provide any authentication credentials (e.g., a valid OAuth token)"
+    schema:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Authentication credentials were not provided"
+  badRequest:
+    description: "You provided missing or invalid parameters. Make sure you provide all required parameters and that they are of the correct type."
+    schema:
+      type: object
+      properties:
+        fieldname:
+          type: array
+          items:
+            type: string
+            example: "This field is required."
+  notFound:
+    description: "The object you are trying to access or modify does not exist. Perhaps the id is incorrect?"
+    schema:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Not found."
+  forbidden:
+    description: "The authorized user is not allowed to perform this action, or perhaps the token does not have the required scope."
+    schema:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "You do not have permission to perform this action."
 tags:
 - name: "user"
   description: "operations concerning a user directly"
 - name: "mentorship"
   description: "operations concerning a mentorship"
+- name: "programme"
+  description: "operations concerning a mentorship programme"
+- name: "cohort"
+  description: "operations concerning a programme's cohort"
 paths:
   /user/:
     get:
@@ -59,6 +103,9 @@ paths:
       description: Returns a list of all users.
       security:
       - password:
+        - read
+        - admin
+      - authcode:
         - read
         - admin
       operationId: listUsers
@@ -71,10 +118,12 @@ paths:
             type: array
             items:
               $ref: '#/definitions/user'
+        400:
+          $ref: '#/responses/badRequest'
         401:
-          description: "you are not logged in"
+          $ref: '#/responses/notAuthenticated'
         403:
-          description: "You do not have admin privileges"
+          $ref: '#/responses/forbidden'
     post:
       tags:
       - "user"
@@ -96,6 +145,8 @@ paths:
           description: "successful operation"
           schema:
             $ref: '#/definitions/user'
+        400:
+          $ref: '#/responses/badRequest'
   /user/{userId}/:
     get:
       tags:
@@ -103,6 +154,11 @@ paths:
       summary: Find user by id
       description: Returns a user's profile.
       operationId: getUserById
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
       produces:
       - "application/json"
       parameters:
@@ -116,14 +172,25 @@ paths:
           description: "successful operation"
           schema:
             $ref: '#/definitions/user'
+        400:
+          $ref: '#/responses/badRequest'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
         404:
-          description: "user not found"
+          $ref: '#/responses/notFound'
     patch:
       tags:
       - "user"
       summary: Update user by id
       description: Updates an existing user's profile. Can only be done by the logged in user or by an admin.
       operationId: updateUserById
+      security:
+      - password:
+        - write
+      - authcode:
+        - write
       produces:
       - "application/json"
       parameters:
@@ -141,17 +208,28 @@ paths:
       responses:
         200:
           description: "successful operation"
+          schema:
+            $ref: "#/definitions/user"
+        400:
+          $ref: '#/responses/badRequest'
+        401:
+          $ref: '#/responses/notAuthenticated'
         403:
-          description: "user is not the same as the logged in user."
+          $ref: '#/responses/forbidden'
         404:
-          description: "user not found"
-  /user/{userId}/image/:
+          $ref: '#/responses/notFound'
+  /user/{userId}/image:
     get:
       tags:
       - "user"
       summary: Find user profile image by username
       description: Returns a given user's profile image, if they have set one.
       operationId: getUserImageById
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
       produces:
       - "image/*"
       parameters:
@@ -163,16 +241,23 @@ paths:
       responses:
         200:
           description: "successful operation"
-        204:
-          description: "user exists but has not set a profile image"
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
         404:
-          description: "user not found"
+          $ref: '#/responses/notFound'
     put:
       tags:
       - "user"
       summary: Set user profile image by id
       description: "Updates an existing user's profile image. Can only be done by the logged in user or by an admin. Maxmimum file size determined by server's maxFileUploadSize property, whichcan be found within /info response."
       operationId: updateUserImageById
+      security:
+      - password:
+        - write
+      - authcode:
+        - write
       consumes: ["multipart/form-data"]
       parameters:
       - name: "userId"
@@ -187,19 +272,28 @@ paths:
         type: "file"
       responses:
         200:
-          description: "successful operation"
+          $ref: "#/responses/ok"
         405:
           description: "image size larger than server's global maxFileUploadSize property, should be scaled down."
-        404:
-          description: "user not found"
+        400:
+          $ref: '#/responses/badRequest'
+        401:
+          $ref: '#/responses/notAuthenticated'
         403:
-          description: "user is not the same as the logged in user."
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
   /user/{userId}/mentorships/:
     get:
       tags: ["user", "mentorship"]
       summary: Get user's mentorships
       description: "Returns array of mentorships user is signed up for. Can only be done by the logged in user or by an admin."
       operationId: getUserMentorshipsById
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
       parameters:
       - name: "userId"
         in: "path"
@@ -218,16 +312,23 @@ paths:
                   $ref: '#/definitions/userMentorship'
         204:
           description: "user exists but is not participating in a mentorship"
+        401:
+          $ref: '#/responses/notAuthenticated'
         403:
-          description: "user does not have access (not same as logged in user or user isn't admin)"
+          $ref: '#/responses/forbidden'
         404:
-          description: "user not found"
+          $ref: '#/responses/notFound'
   /user/{userId}/mentorships/{mentorshipId}/:
     get:
       tags: ["user", "mentorship"]
       summary: Get specific user mentorship
       description: "Returns a mentorship a user is participating in, given a specific mentorship id. Can only be done by the logged in user or by an admin."
       operationId: getSpecificUserMentorshipById
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
       parameters:
       - name: "userId"
         in: "path"
@@ -244,10 +345,12 @@ paths:
           description: "successful operation"
           schema:
             $ref: '#/definitions/userMentorship'
+        401:
+          $ref: '#/responses/notAuthenticated'
         403:
-          description: "user does not have access (not same as logged in user or user isn't admin"
+          $ref: '#/responses/forbidden'
         404:
-          description: "user not found or mentorship not found"
+          $ref: '#/responses/notFound'
   /user/me/:
     get:
       tags:
@@ -255,6 +358,11 @@ paths:
       summary: Find logged in user
       description: Returns the logged in user's profile.
       operationId: getUserByLoggedIn
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
       produces:
       - "application/json"
       responses:
@@ -263,13 +371,18 @@ paths:
           schema:
             $ref: '#/definitions/user'
         401:
-          description: "you are not logged in"
+          $ref: '#/responses/notAuthenticated'
     patch:
       tags:
       - "user"
       summary: Update the logged in user.
       description: Updates the logged in user's profile.
       operationId: updateUserByLoggedIn
+      security:
+      - password:
+        - write
+      - authcode:
+        - write
       produces:
       - "application/json"
       parameters:
@@ -282,20 +395,581 @@ paths:
       responses:
         200:
           description: "successful operation"
+          schema:
+            $ref: "#/definitions/user"
+        400:
+          $ref: '#/responses/badRequest'
         401:
-          description: "you are not logged in"
-  /ping:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+  /programme/:
     get:
-      summary: Server heartbeat operation
-      description: This operation shows how to override the global security defined above, as we want to open it up for all users.
-      # We want to require no security schemes and override the globally define security scheme.
-      # To do that, we simply provide an empty array to the 'security' property.
-      security: [ ]
+      tags: ["programme"]
+      summary: Get a list of all programmes
+      description: Returns an array of all programmes stored in the database.
+      operationId: getProgrammes
+      security:
+      - password: ['read']
+      - authcode: ['read']
+      produces:
+      - "application/json"
       responses:
         200:
-          description: OK
+          description: "successful operation. returns empty array if no programmes."
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/programme"
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+    post:
+      tags: ["programme"]
+      summary: Create new programme
+      description: Creates a new programme.
+      operationId: createProgramme
+      security:
+      - password:
+        - write
+        - staff
+      - authcode:
+        - write
+        - staff
+      produces: ["application/json"]
+      consumes: ["application/json"]
+      parameters:
+      - name: "programme"
+        in: "body"
+        description: "Data of the programme to add"
+        required: true
+        schema:
+          $ref: "#/definitions/programme_creation"
+      responses:
+        201:
+          description: "successful operation. programme created"
+          schema:
+            $ref: "#/definitions/programme"
+        400:
+          $ref: '#/responses/badRequest'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+  /programme/{programmeId}/:
+    get:
+      tags: ["programme"]
+      summary: Get a programme by id
+      description: Returns a mentorship programme given its programmeId
+      operationId: getProgrammeById
+      security:
+      - password: ['read']
+      - authcode: ['read']
+      produces: ["application/json"]
+      parameters:
+      - name: "programmeId"
+        in: "path"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/programme"
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+    patch:
+      tags: ["programme"]
+      summary: Modify a programme by id
+      description: Modify one or more fields of a given mentorship programme.
+      operationId: patchProgrammeById
+      security:
+      - password:
+        - write
+        - staff
+      - authcode:
+        - write
+        - staff
+      produces: ["application/json"]
+      consumes: ["application/json"]
+      parameters:
+      - name: "programmeId"
+        in: "path"
+        required: true
+        type: "string"
+      - name: "programme"
+        in: "body"
+        required: true
+        description: "The data to update the programme with."
+        schema:
+          $ref: "#/definitions/programme_creation"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/programme"
+        400:
+          $ref: '#/responses/badRequest'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+    delete:
+      tags: ["programme"]
+      summary: Delete programme by id
+      description: Delete a mentorship programme given its id, including all associated mentorships and cohorts.
+      operationId: deleteProgrammeById
+      security:
+      - password:
+        - write
+        - admin
+      - authcode:
+        - write
+        - admin
+      produces: ["application/json"]
+      parameters:
+      - name: "programmeId"
+        in: "path"
+        required: true
+        type: "string"
+      responses:
+        200:
+          $ref: "#/responses/ok"
+        400:
+          $ref: '#/responses/badRequest'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+  /programme/{programmeId}/cohorts/:
+    get:
+      tags: ["programme", "cohort"]
+      summary: get a programme's cohorts by id
+      description: Given a programmeId, returna list of all its cohorts.
+      operationId: getCohortByProgrammeId
+      security:
+      - password: ['read']
+      - authcode: ['read']
+      produces: ["application/json"]
+      parameters:
+      - name: "programmeId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the programme to use."
+      responses:
+        200:
+          description: "operation successful"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/cohort"
+        401:
+          $ref: '#/responses/notAuthenticated'
+        404:
+          $ref: '#/responses/notFound'
+    post:
+      tags: ["programme", "cohort"]
+      summary: create a cohort for a programme by id
+      description: Given a programmeId, create a new cohort for it.
+      operationId: createCohortByProgrammeId
+      security:
+      - password:
+        - write
+        - staff
+      - authcode:
+        - write
+        - staff
+      consumes: ["application/json"]
+      produces: ["application/json"]
+      parameters:
+      - name: "programmeId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the programme to use."
+      - name: "cohort"
+        in: "body"
+        required: true
+        description: "The data for the cohort to create."
+        schema:
+          $ref: "#/definitions/cohort_create"
+      responses:
+        201:
+          description: "operation successful"
+          schema:
+            $ref: "#/definitions/cohort"
+        400:
+          $ref: '#/responses/badRequest'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+  /programme/{programmeId}/cohorts/active:
+    get:
+      tags: ["programme", "cohort"]
+      summary: get a programme's currently active cohort
+      description: Given a programmeId, return it's currently active cohort (open for signups, preferably free capacity, earliest opening cohort if there is a choice). Returns 404 if there is no cohort.
+      operationId: getActiveCohortByProgrammeId
+      security:
+      - password: ['read']
+      - authcode: ['read']
+      produces: ["application/json"]
+      parameters:
+      - name: "programmeId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the programme to use."
+      responses:
+        200:
+          description: "operation successful"
+          schema:
+              $ref: "#/definitions/cohort"
+        401:
+          $ref: '#/responses/notAuthenticated'
+        404:
+          $ref: '#/responses/notFound'
+  /cohort/:
+    get:
+      tags: ["cohort"]
+      summary: get a list of cohorts by id
+      description: Return a list of all cohorts.
+      operationId: getCohorts
+      security:
+      - password: ['read']
+      - authcode: ['read']
+      produces: ["application/json"]
+      parameters: []
+      responses:
+        200:
+          description: "operation successful"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/cohort"
+        401:
+          $ref: '#/responses/notAuthenticated'
+        404:
+          $ref: '#/responses/notFound'
+  /cohort/{cohortId}/:
+    get:
+      tags: ["cohort"]
+      summary: get a cohort by its id
+      description: Given a cohortId, return the cohort.
+      operationId: getCohortById
+      security:
+      - password: ['read']
+      - authcode: ['read']
+      produces: ["application/json"]
+      parameters:
+      - name: "cohortId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the cohort to find"
+      responses:
+        200:
+          description: "operation successful"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/cohort"
+        401:
+          $ref: '#/responses/notAuthenticated'
+        404:
+          $ref: '#/responses/notFound'
+    patch:
+      tags: ["cohort"]
+      summary: update a cohort by its id
+      description: Given a cohortId, update the given cohort.
+      operationId: updateCohortById
+      security:
+      - password:
+        - write
+        - staff
+      - authcode:
+        - write
+        - staff
+      produces: ["application/json"]
+      consumes: ["application/json"]
+      parameters:
+      - name: "cohortId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the cohort to find"
+      - name: "cohort"
+        in: "body"
+        required: true
+        description: "The data for the updated cohort."
+        schema:
+          $ref: "#/definitions/cohort_create"
+      responses:
+        200:
+          description: "operation successful"
+          schema:
+            $ref: "#/definitions/cohort"
+        400:
+          $ref: '#/responses/badRequest'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+    delete:
+      tags: ["cohort"]
+      summary: delete a cohort by its id
+      description: Given a cohortId, delete the given cohort, including its associated mentorships and matches.
+      operationId: deleteCohortById
+      security:
+      - password:
+        - write
+        - admin
+      - authcode:
+        - write
+        - admin
+      produces: ["application/json"]
+      parameters:
+      - name: "cohortId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the cohort to delete"
+      responses:
+        204:
+          description: "operation successful"
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+  /cohort/{cohortId}/register:
+    post:
+      tags: ["cohort", "participant"]
+      summary: Register user for a cohort
+      description: Given a cohortId, register the currently authenticated user for this cohort. Only one parameter is required, isMentor.
+      operationId: registerForCohort
+      security:
+      - password:
+        - read
+        - write
+      - authcode:
+        - read
+        - write
+      produces: ["application/json"]
+      consumes: ["application/json"]
+      parameters:
+      - name: "cohortId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the cohort to register for"
+      - name: "participantData"
+        in: "body"
+        required: true
+        description: "registration data"
+        schema:
+          $ref: '#/definitions/participant_create'
+      responses:
+        200:
+          description: "operation successful"
+          schema:
+            $ref: '#/definitions/participant'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          description: "This cohort is full, you have already registered, or you are trying to register past the closing date."
+        404:
+          $ref: '#/responses/notFound'
+  /participant/:
+    get:
+      tags: ["participant"]
+      summary: Get participants
+      description: Gets a list of participations the currently authenticated user has
+      operationId: getParticipants
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
+      produces: ["application/json"]
+      responses:
+        200:
+          description: "operation successful"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/participant'
+        401:
+          $ref: '#/responses/notAuthenticated'
+  /participant/{participantId}/:
+    get:
+      tags: ["participant"]
+      summary: Find a participant by its unique identifier
+      description: "Given a participant's id, return information about it."
+      operationId: getParticipantById
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
+      produces: ["application/json"]
+      parameters:
+      - name: "participantId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the participant to find"
+      responses:
+        200:
+          description: operation successful
+          schema:
+            $ref: '#/definitions/participant'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+  /participant/{participantId}/topThree:
+    get:
+      tags: ["participant"]
+      summary: "Find a participant's top three matches"
+      description: "Given a participant's id, return its top three matches. Returns 404 if the participant's cohort is still open for registration, or matching is completed."
+      operationId: getParticipantTopThreeById
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
+      produces: ["application/json"]
+      parameters:
+      - name: "participantId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the participant to find matches for"
+      responses:
+        200:
+          description: operation successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/participant'
+        204:
+          description: "The participant is a mentor and thus is not eligible to select their top three."
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/forbidden'
+        404:
+          $ref: '#/responses/notFound'
+    post:
+      tags: ["participant"]
+      summary: "Save a participants' top three preferences"
+      description: "Between the cohort's closeDate and matchDate, get the given participant's top three matches. The participant's related user must be the currently authenticated user."
+      operationId: setParticipantTopThreeById
+      security:
+      - password:
+        - read
+        - write
+      - authcode:
+        - read
+        - write
+      consumes: ["application/json"]
+      produces: ["application/json"]
+      parameters:
+      - name: "participantId"
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the participant to select top three for"
+      - name: "topThree"
+        in: "body"
+        required: true
+        description: "Ordered list of top three preferences for matching, from most preferred to least preferred"
+        schema:
+          type: array
+          items:
+            type: string
+            description: "The UUID of the participant."
+            example: "12345678-90ab-cdef-1234-56789abcdef0"
+      responses:
+        200:
+          description: operation successful
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/participant'
+        204:
+          description: "The participant is a mentor and thus is not eligible to select their top three."
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          description: "Either the authenticated user is not allowed to modify this participant, this participant has already submitted their top three matches, or the matchDate of the cohort has already passed."
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items:
+                  type: string
+                  example: "This participant has already submitted their top three matches."
+        404:
+          $ref: '#/responses/notFound'
+  /participant/{participantId}/match:
+    get:
+      tags: ["participant", "match"]
+      summary: "Get a participant's match"
+      description: "Given a participantId, return the participant's match. Can only be called after the cohort's matchDate, will return an error otherwise."
+      operationId: getMatchByParticipantId
+      security:
+      - password:
+        - read
+      - authcode:
+        - read
+      produces: ["application/json"]
+      parameters:
+      - name: participantId
+        in: "path"
+        required: true
+        type: "string"
+        description: "The id of the participant to select top three for"
+      responses:
+        200:
+          description: operation successful
+          schema:
+            $ref: '#/definitions/participant'
+        401:
+          $ref: '#/responses/notAuthenticated'
+        403:
+          $ref: '#/responses/notAuthenticated'
+        404:
+          $ref: '#/responses/notFound'
 
 definitions:
+  tag:
+    type: object
+    properties:
+      name:
+        type: "string"
+        description: "The name of the tag"
   user:
     type: object
     properties:
@@ -358,6 +1032,141 @@ definitions:
         type: "string"
         description: "the user's description about themselves"
         example: "I like people, places and things"
+      tags:
+        type: "array"
+        items:
+          type: "string"
+          example: "programming"
+  programme:
+    type: object
+    properties:
+      programmeId:
+        type: "string"
+        format: "uuid"
+        description: "the unique identifier for the programme"
+        example: "12345678-90ab-cdef-1234-56789abcdef0"
+      name:
+        type: "string"
+        description: "the name of the programme"
+      description:
+        type: "string"
+        description: "the description of the mentorship programme"
+      defaultCohortSize:
+        type: "integer"
+        description: "the default size of any cohorts for this programme"
+      createdBy:
+        $ref: "#/definitions/user"
+  programme_creation:
+    type: object
+    properties:
+      name:
+        type: "string"
+        description: "the name of the programme"
+      description:
+        type: "string"
+        description: "the description of the mentorship programme"
+      defaultCohortSize:
+        type: "integer"
+        description: "the default size of any cohorts for this programme"
+  cohort:
+    type: object
+    required: ["openDate"]
+    properties:
+      cohortId:
+        type: "string"
+        format: "uuid"
+        description: "the unique identifier for the cohort"
+        example: "12345678-90ab-cdef-1234-56789abcdef0"
+      cohortSize:
+        description: "the number of signups allowed in the cohort"
+        type: "integer"
+        example: 200
+      participantCount:
+        description: "the number of participants currently signed up"
+        type: "integer"
+        example: 164
+      openDate:
+        type: "string"
+        format: "datetime"
+        description: "the datetime when the cohort opens for registration."
+        example: "2017-01-01T12:00:00+00:00"
+      closeDate:
+        type: "string"
+        format: "datetime"
+        description: "the datetime when the cohort closes registration and matching begins."
+        example: "2017-01-01T12:00:00+00:00"
+      matchDate:
+        type: "string"
+        format: "datetime"
+        description: "the datetime when the cohort closes matching and mentorships are announced."
+        example: "2017-01-01T12:00:00+00:00"
+      programme:
+        $ref: "#/definitions/programme"
+  cohort_create:
+    type: object
+    properties:
+      cohortSize:
+        description: "the number of signups allowed in the cohort"
+        type: "integer"
+        example: 200
+      openDate:
+        type: "string"
+        format: "datetime"
+        description: "the datetime when the cohort opens for registration."
+        example: "2017-01-01T12:00:00+00:00"
+      closeDate:
+        type: "string"
+        format: "datetime"
+        description: "the datetime when the cohort closes registration and matching begins."
+        example: "2017-01-01T12:00:00+00:00"
+      matchDate:
+        type: "string"
+        format: "datetime"
+        description: "the datetime when the cohort closes matching and mentorships are announced."
+        example: "2017-01-01T12:00:00+00:00"
+  participant:
+    type: object
+    properties:
+      participantId:
+        type: string
+        format: "uuid"
+        description: "the unique identifier for the participant. Unique for each pair of (cohort, user)"
+        example: "12345678-90ab-cdef-1234-56789abcdef0"
+      user:
+        $ref: '#/definitions/user'
+      cohort:
+        $ref: '#/definitions/cohort'
+      signUpDate:
+        type: string
+        format: "datetime"
+        description: "The date/time the participant registered"
+        example: "2017-03-23T15:09:01.567862Z"
+      isMentor:
+        type: boolean
+        description: "True if the participant is a mentor, false if not"
+        example: true
+      isMatched:
+        type: boolean
+        description: "True if the user has been successfully matched yet"
+      tags:
+        type: array
+        description: "User-defined set of tags that describe their interests"
+        items:
+          $ref: '#/definitions/tag'
+  participant_create:
+    type: object
+    required: ["isMentor"]
+    properties:
+      isMentor:
+        type: boolean
+        description: "True if the participant is a mentor, false if not"
+        example: true
+      tags:
+        type: array
+        description: "User-defined set of tags that describe their interests"
+        items:
+          type: "string"
+          example: "programming"
   userMentorship:
     type: object
     properties:
@@ -370,11 +1179,8 @@ definitions:
         description: "given user's role."
       partner:
         $ref: '#/definitions/user'
-      programme:
-        type: integer
-        description: "unique id to reference the programme involved in"
-        #TODO: Use reference to programme def
+      cohort:
+        $ref: "#/definitions/cohort"
 
 # Added by API Auto Mocking Plugin
 host: api.dev.mbell.me
-basePath: /
