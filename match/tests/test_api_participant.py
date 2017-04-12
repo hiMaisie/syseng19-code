@@ -10,10 +10,12 @@ from oauth2_provider.models import AccessToken, Application
 from oauth2_provider.settings import oauth2_settings
 from oauth2_provider.tests.test_utils import TestCaseUtils
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase 
 from datetime import timedelta
 
-class ParticipantAPITests(TestCaseUtils, APITestCase):
+class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
+
+    reset_sequences = True
 
     def setUp(self):
         self.test_user = User.objects.create_user("test@example.com", "test@example.com", "hunter23")
@@ -397,14 +399,39 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
 
     def test_cant_get_top_three_if_mentor(self):
         objs = self._create_nominal_cohort_and_participants()
-        url = reverse('participant-top-three', kwargs={'participantId': objs['mentor'][0].participantId})
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentor'].participantId})
         token = self._create_token(self.other_user, 'read')
         response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self._destroy_nominal_cohort_and_participants(objs)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_can_choose_top_three_if_mentee(self):
-        obj = self._create_nominal_cohort_and_participants()
-        url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'][0].participantId})
+        objs = self._create_nominal_cohort_and_participants()
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
+        token = self._create_token(self.test_user, 'write')
+        data = [
+            objs['mentor'][2].participantId,
+            objs['mentor'][1].participantId,
+            objs['mentor'][0].participantId,
+        ]
+        response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self._destroy_nominal_cohort_and_participants(objs)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_cant_choose_top_three_if_mentor(self):
+        objs = self._create_nominal_cohort_and_participants()
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentor'][0].participantId})
+        token = self._create_token(self.other_user, 'write')
+        data = [
+            objs['mentee'].participantId,
+        ]
+        response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self._destroy_nominal_cohort_and_participants(objs)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_cant_choose_top_three_twice(self):
+        objs = self._create_nominal_cohort_and_participants()
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
         token = self._create_token(self.test_user, 'write')
         data = [
             objs['mentor'][2].participantId,
@@ -413,8 +440,39 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         ]
         response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #TODO: Add test for can't choose top three twice
-    #TODO: Add test for can't choose top three before closeDate
+        response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self._destroy_nominal_cohort_and_participants(objs)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cant_choose_same_mentor_in_top_three_twice(self):
+        objs = self._create_nominal_cohort_and_participants()
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
+        token = self._create_token(self.test_user, 'write')
+        data = [
+            objs['mentor'][2].participantId,
+            objs['mentor'][2].participantId,
+            objs['mentor'][0].participantId,
+        ]
+        response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self._destroy_nominal_cohort_and_participants(objs)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cant_choose_top_three_before_closeDate(self):
+        objs = self._create_nominal_cohort_and_participants()
+        objs['cohort'].openDate = timezone.now() - timedelta(days=1)
+        objs['cohort'].closeDate = timezone.now() + timedelta(days=1)
+        objs['cohort'].matchDate = timezone.now() + timedelta(days=3)
+        objs['cohort'].save()
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
+        token = self._create_token(self.test_user, 'write')
+        data = [
+            objs['mentor'][2].participantId,
+            objs['mentor'][1].participantId,
+            objs['mentor'][0].participantId,
+        ]
+        response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
+        self._destroy_nominal_cohort_and_participants(objs)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
     #TODO: Add test for can't choose top three after matchDate
     #TODO: Add test for can't choose top three if auth user isn't participant
     #TODO: Add test for pass when <3 choices given.
@@ -483,3 +541,10 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
                 mentor3,
             ]
         }
+    
+    def _destroy_nominal_cohort_and_participants(self, objs):
+        pass
+        #for mentor in objs['mentors']:
+        #    mentor.destroy()
+        #objs['mentee'].destroy()
+        #objs['cohort'].destroy()
