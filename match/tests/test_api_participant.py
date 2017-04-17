@@ -10,12 +10,10 @@ from oauth2_provider.models import AccessToken, Application
 from oauth2_provider.settings import oauth2_settings
 from oauth2_provider.tests.test_utils import TestCaseUtils
 from rest_framework import status
-from rest_framework.test import APITransactionTestCase 
+from rest_framework.test import APITestCase 
 from datetime import timedelta
 
-class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
-
-    reset_sequences = True
+class ParticipantAPITests(TestCaseUtils, APITestCase):
 
     def setUp(self):
         self.test_user = User.objects.create_user("test@example.com", "test@example.com", "hunter23")
@@ -48,134 +46,6 @@ class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
             'django': Tag.objects.create(name="Django Rest Framework"),
         }
 
-    def test_can_register_for_cohort(self):
-        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
-        data = {
-            'isMentor': True
-        }
-        token = self._create_token(self.test_user, 'read write')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_can_register_for_cohort_with_new_tags(self):
-        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
-        data = {
-            'isMentor': True,
-            'tags': [
-                'node.js',
-                'running'
-            ]
-        }
-        token = self._create_token(self.test_user, 'read write')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        res_data = json.loads(response.content.decode('utf-8'))
-        self.assertEqual(len(res_data['tags']), 2)
-
-    def test_can_register_for_cohort_with_existing_tags(self):
-        Tag.objects.create(name="node.js")
-        Tag.objects.create(name="running")
-        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
-        data = {
-            'isMentor': True,
-            'tags': [
-                'node.js',
-                'running'
-            ]
-        }
-        token = self._create_token(self.test_user, 'read write')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        res_data = json.loads(response.content.decode('utf-8'))
-        self.assertEqual(len(res_data['tags']), 2)
-
-    def test_can_register_for_cohort_with_duplicate_tags(self):
-        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
-        data = {
-            'isMentor': True,
-            'tags': [
-                'node.js',
-                'Node.js',
-                'running'
-            ]
-        }
-        token = self._create_token(self.test_user, 'read write')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        res_data = json.loads(response.content.decode('utf-8'))
-        # Should be case insensitive.
-        self.assertEqual(len(res_data['tags']), 2)
-
-    def test_cant_register_for_cohort_without_scope(self):
-        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
-        data = {
-            'isMentor': True
-        }
-        token = self._create_token(self.test_user, '')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_cant_register_for_cohort_twice(self):
-        self.cohort.participants.create(
-            user=self.test_user,
-            isMentor=True
-        )
-        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
-        data = {
-            'isMentor': True
-        }
-        token = self._create_token(self.test_user, 'read write')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_cant_register_for_full_cohort(self):
-        Participant.objects.create(
-            user=self.test_user,
-            cohort=self.cohort,
-            isMentor=True
-        )
-        Participant.objects.create(
-            user=self.staff_user,
-            cohort=self.cohort,
-            isMentor=True
-        )
-        url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
-        data = {
-            'isMentor': True
-        }
-        token = self._create_token(self.other_user, 'read write')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_cant_register_for_cohort_before_opendate(self):
-        earlycohort = self.programme.cohorts.create(
-            cohortSize=2,
-            createdBy=self.staff_user,
-            openDate=timezone.now() + timedelta(days=2)
-        )
-        url = reverse('cohort-register', kwargs={'cohortId': earlycohort.cohortId})
-        data = {
-            'isMentor': True
-        }
-        token = self._create_token(self.other_user, 'read write')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_cant_register_for_cohort_after_closedate(self):
-        latecohort = self.programme.cohorts.create(
-            cohortSize=2,
-            createdBy=self.staff_user,
-            openDate=timezone.now() - timedelta(days=7),
-            closeDate=timezone.now() - timedelta(days=2)
-        )
-        url = reverse('cohort-register', kwargs={'cohortId': latecohort.cohortId})
-        data = {
-            'isMentor': True
-        }
-        token = self._create_token(self.other_user, 'read write')
-        response = self.client.post(url, data=data, format='json', HTTP_AUTHORIZATION=self._get_auth_header(token=token.token))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
     def test_cant_get_participant_endpoint_without_registering(self):
         url = reverse('cohort-register', kwargs={'cohortId': self.cohort.cohortId})
         token = self._create_token(self.test_user, 'read write')
@@ -207,7 +77,7 @@ class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         res_data = json.loads(response.content.decode('utf-8'))
         self.assertEqual(len(res_data), 1)
-        self.assertEqual(res_data[0]['participantId'], p.participantId)
+        self.assertEqual(res_data[0]['participantId'], str(p.participantId))
 
     def test_get_empty_list_of_participants_if_no_participants(self):
         self.cohort.participants.create(
@@ -313,47 +183,9 @@ class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
     
     def test_cant_get_top_three_if_matching_finished(self):
-        cohort = self.programme.cohorts.create(
-            openDate=timezone.now() - timedelta(days=8),
-            closeDate=timezone.now() - timedelta(days=3),
-            matchDate=timezone.now() - timedelta(days=1),
-            createdBy=self.test_user
-        )
-        p = cohort.participants.create(
-            isMentor=False,
-            user=self.test_user,
-            tags=[
-                self.tags['django'],
-                self.tags['nodejs'],
-                self.tags['sports'],
-            ]
-        )
-        mentor1 = cohort.participants.create(
-            isMentor=True,
-            user=self.other_user,
-            tags=[
-                self.tags['django'],
-            ]
-        )
-        mentor2 = cohort.participants.create(
-            isMentor=True,
-            user=self.staff_user,
-            tags=[
-                self.tags['nodejs'],
-                self.tags['sports'],
-            ]
-        )
-        mentor3 = cohort.participants.create(
-            isMentor=True,
-            user=self.staff_user,
-            tags=[
-                self.tags['django'],
-                self.tags['nodejs'],
-                self.tags['sports'],
-            ]
-        )
-        cohort.match()
-        url = reverse('participant-top-three', kwargs={'participantId': p.participantId})
+        objs = self._create_nominal_cohort_and_participants()
+        objs['cohort'].match()
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
         token = self._create_token(self.test_user, 'read')
         response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -399,7 +231,7 @@ class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
 
     def test_cant_get_top_three_if_mentor(self):
         objs = self._create_nominal_cohort_and_participants()
-        url = reverse('participant-top-three', kwargs={'participantId': objs['mentor'].participantId})
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentors'][0].participantId})
         token = self._create_token(self.other_user, 'read')
         response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self._destroy_nominal_cohort_and_participants(objs)
@@ -420,7 +252,7 @@ class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
     
     def test_cant_choose_top_three_if_mentor(self):
         objs = self._create_nominal_cohort_and_participants()
-        url = reverse('participant-top-three', kwargs={'participantId': objs['mentor'][0].participantId})
+        url = reverse('participant-top-three', kwargs={'participantId': objs['mentors'][0].participantId})
         token = self._create_token(self.other_user, 'write')
         data = [
             objs['mentee'].participantId,
@@ -498,6 +330,7 @@ class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
             matchDate=timezone.now() + timedelta(days=3),
             createdBy=self.test_user
         )
+                
         p = cohort.participants.create(
             isMentor=False,
             user=self.test_user,
@@ -524,7 +357,7 @@ class ParticipantAPITests(TestCaseUtils, APITransactionTestCase):
         )
         mentor3 = cohort.participants.create(
             isMentor=True,
-            user=self.staff_user,
+            user=self.fourth_user,
             tags=[
                 self.tags['django'],
                 self.tags['nodejs'],

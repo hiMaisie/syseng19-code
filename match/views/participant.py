@@ -5,20 +5,22 @@ from match.serializers import CohortSerializer,ParticipantSerializer,UserSeriali
 from django.conf.urls import include,url
 from django.db.utils import IntegrityError
 from django.http import Http404
+from django.utils import timezone
 import json
 from oauth2_provider.ext.rest_framework import TokenHasReadWriteScope, TokenHasScope
 from rest_framework import decorators,permissions,routers,status,viewsets
 from rest_framework.routers import DefaultRouter
 from rest_framework.serializers import ValidationError
 
-class CohortViewSet(viewsets.ModelViewSet):
+class ParticipantViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, TokenHasScope]
     required_scopes = ['read']
-    queryset = Cohort.objects.select_related('createdBy').all()
+    #queryset = Cohort.objects.select_related('createdBy').all()
+    queryset = Participant.objects.all()
 
-    serializer_class = CohortSerializer
+    serializer_class = ParticipantSerializer
 
-    lookup_field = 'cohortId'
+    lookup_field = 'participantId'
 
     def get_permissions(self):
         if self.action in ['create', 'partial_update', 'destroy']:
@@ -26,13 +28,9 @@ class CohortViewSet(viewsets.ModelViewSet):
             self.required_scopes = ['write', 'staff']
         return super(self.__class__, self).get_permissions()
 
-    def partial_update(self, request, **kwargs):
-        # Prevent non-owner from patching this object.
-        c = Cohort.objects.get(cohortId=self.kwargs['cohortId'])
-        if self.request.user == c.createdBy:
-            return super(self.__class__, self).partial_update(request, **kwargs)
-        else:
-            return JSONResponse({'detail': 'You do not have permission to perform this action. (you do not own the resource)'}, status=status.HTTP_403_FORBIDDEN)
+    def list(self, request, **kwargs):
+        self.queryset = Participant.objects.filter(user=self.request.user)
+        return super(self.__class__, self).list(request, **kwargs)
 
     def destroy(self, request, **kwargs):
         # Prevent non-owner from deleting this object.
@@ -57,32 +55,31 @@ class CohortViewSet(viewsets.ModelViewSet):
         return JSONResponse(s.data, status=status.HTTP_200_OK)
     
     @decorators.detail_route(methods=['get'], required_scopes=['read'])
-    def get_registration(self, request, **kwargs):
-        c = Cohort.objects.get(cohortId=self.kwargs['cohortId'])
+    def getTopThree(self, request, **kwargs):
+        p = None
         try:
-            participant = Participant.objects.get(cohort=c, user=self.request.user)
-        except Participant.DoesNotExist:
-            return JSONResponse({'detail': 'User not signed up for this cohort'}, status=status.HTTP_404_NOT_FOUND)
-        s = ParticipantSerializer(participant)
-        return JSONResponse(s.data)
+            p = Participants.objects.get(participantId=self.kwargs['participantId'])
+            if not p.user.username == self.request.user.username:
+                return JSONResponse({'detail': 'You do not have permission to see this participant\'s details'}, status=status.HTTP_403_FORBIDDEN)
+            if p.isMentor:
+                return JSONResponse({'detail': 'Only mentees can view their top three matches'}, status=status.HTTP_403_FORBIDDEN)
+            if timezone.now() < p.cohort.closeDate:
+                return JSONResponse({'detail': 'Matching has not yet begun'}, status=status.HTTP_403_FORBIDDEN)
+            topThree = p.getTopThree()
 
-cohort_list = CohortViewSet.as_view({
+        except Participant.DoesNotExist:
+            return JSONResponse({'detail': 'Participant not found with that ID'}, status=status.HTTP_404_NOT_FOUND)
+
+participant_list = ParticipantViewSet.as_view({
     'get': 'list'
 })
 
-cohort_detail = CohortViewSet.as_view({
+participant_detail = ParticipantViewSet.as_view({
     'get': 'retrieve',
-    'patch': 'partial_update',
     'delete': 'destroy'
 })
 
-cohort_register = CohortViewSet.as_view({
-    'get': 'get_registration',
-    'post': 'register'
-})
-
 urlpatterns = [
-    url(r'^$', cohort_list, name='cohort-list'),
-    url(r'^(?P<cohortId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/register$', cohort_register, name='cohort-register'),
-    url(r'^(?P<cohortId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/$', cohort_detail, name='cohort-detail'),
+    url(r'^$', participant_list, name='participant-list'),
+    url(r'^(?P<participantId>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/$', participant_detail, name='participant-detail'),
 ]

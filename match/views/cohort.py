@@ -50,8 +50,8 @@ class CohortViewSet(viewsets.ModelViewSet):
             return JSONResponse({'detail': s.errors}, status=status.HTTP_400_BAD_REQUEST)
         try:
             s.save(user=request.user, cohort=c)
-        except IntegrityError:
-            return JSONResponse({'detail': 'You have already applied for this cohort.'}, status=status.HTTP_403_FORBIDDEN)
+        except IntegrityError as e:
+            return JSONResponse({'detail': 'You have already applied for this cohort.', 'errors': e.args[0]}, status=status.HTTP_403_FORBIDDEN)
         except ValidationError as e:
             return JSONResponse({'detail': e.args[0]}, status=status.HTTP_403_FORBIDDEN)
         return JSONResponse(s.data, status=status.HTTP_200_OK)
