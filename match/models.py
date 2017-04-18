@@ -151,6 +151,23 @@ class Participant(models.Model):
         else:
             return []
 
+    def setTopThree(self, choices):
+        # Adjust MentorshipScores accordingly. 10 points for first preference, 5 for second, 0 for third.
+            try:
+                mentor = Participant.objects.get(participantId=choices[0])
+                score = MentorshipScore.objects.get(mentee=self, mentor=mentor)
+                score.score += 10
+                score.save()
+
+                mentor = Participant.objects.get(participantId=choices[1])
+                score = MentorshipScore.objects.get(mentee=self, mentor=mentor)
+                score.score += 5
+                score.save()
+            except KeyError:
+                pass
+            self.isTopThreeSelected = True
+            self.save()
+
 class MentorshipScore(models.Model):
     mentorshipScoreId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     mentor = models.ForeignKey(Participant, related_name="+")

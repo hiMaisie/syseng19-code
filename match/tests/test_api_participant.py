@@ -3,7 +3,7 @@ import json
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
-from match.models import Cohort,Participant,Programme,Tag
+from match.models import Cohort,MentorshipScore,Participant,Programme,Tag
 from match.serializers import ParticipantSerializer
 from oauth2_provider.compat import urlencode
 from oauth2_provider.models import AccessToken, Application
@@ -101,7 +101,7 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         response = self.client.get(url, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         res_data = json.loads(response.content.decode('utf-8'))
-        self.assertEqual(res_data[0]['participantId'], p.participantId)
+        self.assertEqual(res_data['participantId'], str(p.participantId))
 
     def test_can_get_top_three_if_cohort_closed(self):
         cohort = self.programme.cohorts.create(
@@ -136,7 +136,7 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         )
         mentor3 = cohort.participants.create(
             isMentor=True,
-            user=self.staff_user,
+            user=self.fourth_user,
             tags=[
                 self.tags['django'],
                 self.tags['nodejs'],
@@ -150,9 +150,9 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         res_data = json.loads(response.content.decode('utf-8'))
         self.assertEqual(len(res_data), 3)
-        self.assertEqual(res_data[0]['participantId'], mentor3.participantId)
-        self.assertEqual(res_data[1]['participantId'], mentor2.participantId)
-        self.assertEqual(res_data[2]['participantId'], mentor1.participantId)
+        self.assertEqual(res_data[0]['participantId'], str(mentor3.participantId))
+        self.assertEqual(res_data[1]['participantId'], str(mentor2.participantId))
+        self.assertEqual(res_data[2]['participantId'], str(mentor1.participantId))
 
     def test_cant_get_top_three_if_cohort_not_closed(self):
         cohort = self.programme.cohorts.create(
@@ -184,6 +184,8 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
     
     def test_cant_get_top_three_if_matching_finished(self):
         objs = self._create_nominal_cohort_and_participants()
+        objs['cohort'].matchDate= timezone.now() - timedelta(minutes=10)
+        objs['cohort'].save()
         objs['cohort'].match()
         url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
         token = self._create_token(self.test_user, 'read')
@@ -241,22 +243,40 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         objs = self._create_nominal_cohort_and_participants()
         url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
         token = self._create_token(self.test_user, 'write')
-        data = [
-            objs['mentor'][2].participantId,
-            objs['mentor'][1].participantId,
-            objs['mentor'][0].participantId,
+        scores = [
+            MentorshipScore.objects.get(mentee=objs['mentee'], mentor=objs['mentors'][2]),
+            MentorshipScore.objects.get(mentee=objs['mentee'], mentor=objs['mentors'][1]),
+            MentorshipScore.objects.get(mentee=objs['mentee'], mentor=objs['mentors'][0])
         ]
+        data = {
+            'choices': [
+                objs['mentors'][2].participantId,
+                objs['mentors'][1].participantId,
+                objs['mentors'][0].participantId,
+            ]
+        }
         response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self._destroy_nominal_cohort_and_participants(objs)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        if not response.status_code == status.HTTP_200_OK:
+            self.fail(response.content)
+        new_scores = [
+            MentorshipScore.objects.get(mentee=objs['mentee'], mentor=objs['mentors'][2]),
+            MentorshipScore.objects.get(mentee=objs['mentee'], mentor=objs['mentors'][1]),
+            MentorshipScore.objects.get(mentee=objs['mentee'], mentor=objs['mentors'][0])
+        ]
+        self.assertEqual(new_scores[0].score, scores[0].score + 10)
+        self.assertEqual(new_scores[1].score, scores[1].score + 5)
+        self.assertEqual(new_scores[2].score, scores[2].score)
     
     def test_cant_choose_top_three_if_mentor(self):
         objs = self._create_nominal_cohort_and_participants()
         url = reverse('participant-top-three', kwargs={'participantId': objs['mentors'][0].participantId})
         token = self._create_token(self.other_user, 'write')
-        data = [
-            objs['mentee'].participantId,
-        ]
+        data = {
+            'choices': [
+                objs['mentee'].participantId
+            ]
+        }
         response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self._destroy_nominal_cohort_and_participants(objs)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -265,13 +285,16 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         objs = self._create_nominal_cohort_and_participants()
         url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
         token = self._create_token(self.test_user, 'write')
-        data = [
-            objs['mentor'][2].participantId,
-            objs['mentor'][1].participantId,
-            objs['mentor'][0].participantId,
-        ]
+        data = {
+            'choices': [
+                objs['mentors'][2].participantId,
+                objs['mentors'][1].participantId,
+                objs['mentors'][0].participantId,
+            ]
+        }
         response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        if not response.status_code == status.HTTP_200_OK:
+            self.fail(response.content)
         response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self._destroy_nominal_cohort_and_participants(objs)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -280,11 +303,13 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         objs = self._create_nominal_cohort_and_participants()
         url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
         token = self._create_token(self.test_user, 'write')
-        data = [
-            objs['mentor'][2].participantId,
-            objs['mentor'][2].participantId,
-            objs['mentor'][0].participantId,
-        ]
+        data = {
+            'choices': [
+                objs['mentors'][2].participantId,
+                objs['mentors'][2].participantId,
+                objs['mentors'][0].participantId,
+            ]
+        }
         response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self._destroy_nominal_cohort_and_participants(objs)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -297,11 +322,13 @@ class ParticipantAPITests(TestCaseUtils, APITestCase):
         objs['cohort'].save()
         url = reverse('participant-top-three', kwargs={'participantId': objs['mentee'].participantId})
         token = self._create_token(self.test_user, 'write')
-        data = [
-            objs['mentor'][2].participantId,
-            objs['mentor'][1].participantId,
-            objs['mentor'][0].participantId,
-        ]
+        data = {
+            'choices': [
+                objs['mentors'][2].participantId,
+                objs['mentors'][1].participantId,
+                objs['mentors'][0].participantId,
+            ]
+        }
         response = self.client.post(url, data, HTTP_AUTHORIZATION=self._get_auth_header(token.token))
         self._destroy_nominal_cohort_and_participants(objs)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

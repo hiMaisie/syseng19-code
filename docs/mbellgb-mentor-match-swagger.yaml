@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  version: "0.2.0"
+  version: "0.2.1"
   title: ATOS Mentor Match
   description: API documentation for the ATOS Mentor Match project.
 schemes:
@@ -905,11 +905,14 @@ paths:
         required: true
         description: "Ordered list of top three preferences for matching, from most preferred to least preferred"
         schema:
-          type: array
-          items:
-            type: string
-            description: "The UUID of the participant."
-            example: "12345678-90ab-cdef-1234-56789abcdef0"
+          type: object
+          properties:
+            choices:
+              type: array
+              items:
+                type: string
+                description: "The UUID of the participant."
+                example: "12345678-90ab-cdef-1234-56789abcdef0"
       responses:
         200:
           description: operation successful
