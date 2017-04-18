@@ -169,8 +169,20 @@ class ParticipantSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This cohort has closed for registration.")
         if timezone.now() < validated_data['cohort'].openDate:
             raise serializers.ValidationError("This cohort is not yet open for registration.")
+        
+        tags = []
+        try:
+            tags = validated_data.pop('tags')
+        except KeyError:
+            pass
+        p = models.Participant.objects.create(**validated_data)
+        
+        # Adding tags manually AFTER participant created to
+        # avoid IntegrityError.
+        for tag in tags:
+            p.tags.add(tag)
+        return p
 
-        return models.Participant.objects.create(**validated_data)
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:

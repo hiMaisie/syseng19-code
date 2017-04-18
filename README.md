@@ -1,7 +1,7 @@
 # syseng19-code [![Build Status](https://travis-ci.org/mbellgb/syseng19-code.svg?branch=master)](https://travis-ci.org/mbellgb/syseng19-code)
 Code repository for systems engineering project.
 
-[Live API Documentation](https://app.swaggerhub.com/api/mbellgb/mentor-match/0.1.0)
+[Live API Documentation](https://app.swaggerhub.com/api/mbellgb/mentor-match/0.2.1)
 
 ## Setting up a development environment
 

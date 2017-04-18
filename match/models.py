@@ -121,6 +121,16 @@ class Cohort(models.Model):
     def participantCount(self):
         return self.participants.count()
 
+    def match(self):
+        mentors = self.participants.filter(isMentor=True)
+        for mentee in self.participants.filter(isMentor=False):
+            for mentor in mentors:
+                p = MentorshipScore.objects.create(
+                        mentor=mentor,
+                        mentee=mentee
+                )
+                p.calculateScore()
+
 class Participant(models.Model):
     participantId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(User, related_name="mentorships")
@@ -128,16 +138,47 @@ class Participant(models.Model):
     signUpDate = models.DateTimeField(default=timezone.now)
     isMentor = models.BooleanField(null=False)
     isMatched = models.BooleanField(default=False)
+    isTopThreeSelected = models.BooleanField(default=False)
     tags = models.ManyToManyField(Tag, related_name="ParticipantTag")
 
     class Meta:
         unique_together  = (("user", "cohort",),)
+
+    def getTopThree(self):
+        if not (self.isMentor or self.isTopThreeSelected):
+            topThree = MentorshipScore.objects.filter(mentee=self).order_by("-score")[:3]
+            return list(map(lambda p: p.mentor, topThree))
+        else:
+            return []
+
+    def setTopThree(self, choices):
+        # Adjust MentorshipScores accordingly. 10 points for first preference, 5 for second, 0 for third.
+            try:
+                mentor = Participant.objects.get(participantId=choices[0])
+                score = MentorshipScore.objects.get(mentee=self, mentor=mentor)
+                score.score += 10
+                score.save()
+
+                mentor = Participant.objects.get(participantId=choices[1])
+                score = MentorshipScore.objects.get(mentee=self, mentor=mentor)
+                score.score += 5
+                score.save()
+            except KeyError:
+                pass
+            self.isTopThreeSelected = True
+            self.save()
 
 class MentorshipScore(models.Model):
     mentorshipScoreId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     mentor = models.ForeignKey(Participant, related_name="+")
     mentee = models.ForeignKey(Participant, related_name="scores")
     score = models.IntegerField(default=0)
+
+    def calculateScore(self):
+        mentee_tags = list(self.mentee.tags.all())
+        mentor_tags = list(self.mentor.tags.all())
+        self.score = len(set(mentee_tags).intersection(mentor_tags))
+        self.save()
 
 class Mentorship(models.Model):
     mentor = models.ForeignKey(Participant, related_name="mentor_mentorships")
