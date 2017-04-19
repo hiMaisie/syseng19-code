@@ -131,6 +131,30 @@ class Cohort(models.Model):
                 )
                 p.calculateScore()
 
+    def match_final(self):
+        # implements the Gale-Shapley algorith.
+        mentors = []
+        for mentor in self.participants.filter(isMentor=True):
+            mentors.append({
+                'participantId': mentor.participantId,
+                'isFree': True
+            })
+        mentees = []
+        for mentor in self.participants.filter(isMentor=True):
+            mentors.append({
+                'participantId': mentor.participantId,
+                'engagedTo': None
+            })
+        for mentee in self.participants.filter(isMentor=False):
+            mentees.append({
+                'participantId': mentor.participantId,
+                'engagedTo': None,
+                'prefList': list(MentorshipScore.objects.filter(mentee=mentee).order_by("-score"))
+            })
+        # Add dummy vals.
+        # https://en.wikipedia.org/wiki/Stable_marriage_problem#Solution
+
+
 class Participant(models.Model):
     participantId = models.UUIDField(primary_key=True,default=uuid.uuid4, editable=False, unique=True)
     user = models.ForeignKey(User, related_name="mentorships")

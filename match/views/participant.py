@@ -102,22 +102,6 @@ class ParticipantViewSet(viewsets.ModelViewSet):
                 if not str(p.participantId) in choices:
                     return JSONResponse({'detail': 'You must choose all of the user\'s top three matches, ordered by user preference'}, status=status.HTTP_403_FORBIDDEN)
             
-            # Adjust MentorshipScores accordingly. 10 points for first preference, 5 for second, 0 for third.
-            ##try:
-            ##    mentor = Participant.objects.get(participantId=choices[0])
-            ##    score = MentorshipScore.objects.get(mentee=participant, mentor=mentor)
-            ##    score.score += 10
-            ##    score.save()
-
-            ##    mentor = Participant.objects.get(participantId=choices[1])
-            ##    score = MentorshipScore.objects.get(mentee=participant, mentor=mentor)
-            ##    score.score += 5
-            ##    score.save()
-            ##    
-            ##except KeyError:
-            ##    pass
-            ##participant.isTopThreeSelected = True
-            ##participant.save()
             participant.setTopThree(choices)
             return JSONResponse({'detail': 'Top Three successfully selected'}, status=status.HTTP_200_OK)
         except Participant.DoesNotExist:
