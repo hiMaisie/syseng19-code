@@ -20,3 +20,6 @@ tests/report/
 .virtualenvs
 travis.pem
 1
+docs/*.pdf
+docs/*.tex
+docs/makefile
