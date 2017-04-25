@@ -1,17 +1,19 @@
-Setting up the Mentor Match API Server
-======================================
+Mentor Match API Server Technical Information
+=============================================
 
 Tested to work on Ubuntu Linux, should work on any Linux distribution.
 
 Contents
 ========
-Requirements
-
-Install instructions
-
-Registering an OAuth application
-
-Questions?
+* [Requirements](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#requirements)
+* [Install instructions](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#install-instructions)
+    * [Setup the project directory](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#setup-the-project-directory)
+    * [Setting the environment variables](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#setting-the-environment-variables)
+    * [Setting up Nginx to serve Mentor Match](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#setting-up-nginx-to-serve-mentor-match)
+    * [Further steps](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#further-steps)
+* [Registering an OAuth application](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#register-an-oauth-application)
+* [API Documentation](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#api-documentation)
+* [Questions?](https://github.com/mbellgb/syseng19-code/blob/master/docs/setup.md#questions)
 
 Thanks
 ======
@@ -290,6 +292,12 @@ GET /user/me/
 Authorization: Bearer <YOUR_AUTH_TOKEN>
 ...
 ```
+API Documentation
+=================
+The latest version of the API documentation is available on
+[SwaggerHub](https://app.swaggerhub.com/api/mbellgb/mentor-match/0.2.1). It shows
+how to use the API to perform various actions on the server, as well as expected
+input and output.
 
 Questions?
 ==========
