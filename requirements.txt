@@ -10,7 +10,7 @@ netifaces==0.10.5
 oauthlib==1.1.2
 olefile==0.44
 packaging==16.8
-Pillow==4.0.0
+Pillow==9.3.0
 psycopg2==2.6.2
 pyparsing==2.1.10
 python-slugify==1.2.1
